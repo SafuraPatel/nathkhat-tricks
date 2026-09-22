@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="NathKhat - Dynamic study, revision and Desi Tricks platform for UGC NET Paper 1 and Paper 2 Computer Science with index jumping, rich formatting, notepad and recycle bin.">
+  <title>NathKhat | UGC NET Paper 1 & P2 Computer Science Desi Tricks & Revision</title>
+  
+  <!-- Modern Typography from Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Top Application Header -->
+  <header class="app-header">
+    <!-- Brand / Logo -->
+    <div class="brand-wrapper" id="brandBtn" title="NathKhat Home">
+      <div class="brand-icon-box">
+        <span>📚</span>
+      </div>
+      <div class="brand-text-col">
+        <h1 class="brand-name">
+          NathKhat
+          <span class="brand-badge">UGC NET</span>
+        </h1>
+        <span class="brand-tagline">Paper 1 &amp; P2 (Computer Science) Desi Tricks</span>
+      </div>
+    </div>
+
+    <!-- Paper 1 & Paper 2 Filter Switchers -->
+    <div class="paper-filter-group" role="group" aria-label="Paper Filter">
+      <button type="button" class="filter-btn active" data-paper="ALL" id="filterAll">
+        <span>All</span>
+        <span class="badge" id="countAllBadge">0</span>
+      </button>
+      <button type="button" class="filter-btn" data-paper="P1" id="filterP1" title="Paper 1: General Paper on Teaching &amp; Research Aptitude">
+        <span>P1</span>
+        <span class="badge" id="countP1Badge">0</span>
+      </button>
+      <button type="button" class="filter-btn" data-paper="P2" id="filterP2" title="Paper 2: Computer Science &amp; Applications">
+        <span>P2</span>
+        <span class="badge" id="countP2Badge">0</span>
+      </button>
+    </div>
+
+    <!-- Global Live Search Bar -->
+    <div class="search-container" id="searchContainer">
+      <div class="search-input-wrapper">
+        <span class="search-icon">🔍</span>
+        <input 
+          type="text" 
+          id="globalSearchInput" 
+          class="search-input" 
+          placeholder="Search topics, desi tricks, keywords..." 
+          autocomplete="off"
+          spellcheck="false"
+        >
+        <div class="search-shortcuts">
+          <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search">✕</button>
+          <span class="kbd-shortcut" title="Press / to focus search">/</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Header Actions (New Topic, Theme, Backup) -->
+    <div class="header-actions">
+      <button type="button" class="btn-primary" id="openAddTopicBtn" title="Add a new topic with desi trick &amp; explanation">
+        <span>➕</span>
+        <span>Add Topic</span>
+      </button>
+
+      <button type="button" class="btn-icon" id="themeToggleBtn" title="Toggle Dark / Light Theme" aria-label="Toggle Theme">
+        <span id="themeIcon">🌙</span>
+      </button>
+
+      <button type="button" class="btn-icon" id="backupDataBtn" title="Backup or Restore Data (JSON)" aria-label="Backup / Restore">
+        <span>💾</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Secondary Navigation Bar (Sections Switcher) -->
+  <nav class="nav-sections-bar">
+    <div class="section-tabs" role="tablist">
+      <button type="button" class="nav-tab-btn active" data-view="topicsView" id="tabTopicsView" role="tab">
+        <span>📚</span>
+        <span>Topics &amp; Desi Tricks</span>
+        <span class="tab-badge" id="activeTopicsBadge">0</span>
+      </button>
+      <button type="button" class="nav-tab-btn" data-view="notepadView" id="tabNotepadView" role="tab">
+        <span>📝</span>
+        <span>General Notepad</span>
+      </button>
+      <button type="button" class="nav-tab-btn" data-view="binView" id="tabBinView" role="tab">
+        <span>🗑️</span>
+        <span>Recycle Bin</span>
+        <span class="tab-badge" id="binCountBadge">0</span>
+      </button>
+    </div>
+
+    <div class="stats-pill">
+      <span id="quickStatsText">Ready to revise</span>
+    </div>
+  </nav>
+
+  <!-- App Main Layout (Section 1: Index + Section 2/3/4 Content Views) -->
+  <div class="app-container">
+    
+    <!-- SECTION 1: Index Sidebar (Quick Jump Navigator) -->
+    <aside class="index-sidebar" id="indexSidebar">
+      <div class="index-header">
+        <div class="index-title">
+          <span>📑</span>
+          <span>Topics Index</span>
+          <span class="index-counter-badge" id="indexCountBadge">0</span>
+        </div>
+      </div>
+
+      <div class="index-filter-input-wrap">
+        <div class="index-filter-wrap-rel">
+          <span class="index-filter-icon">⚡</span>
+          <input 
+            type="text" 
+            id="indexFilterInput" 
+            class="index-filter-input" 
+            placeholder="Quick filter index..."
+          >
+        </div>
+      </div>
+
+      <!-- Index Dynamic Topics List (New topics always appear at top) -->
+      <div class="index-list-container" id="indexList" role="navigation" aria-label="Topic Index">
+        <!-- Rendered dynamically via JavaScript -->
+      </div>
+    </aside>
+
+    <!-- Main Stage Content Area -->
+    <main class="main-stage">
+      
+      <!-- SECTION 2: Topics & Desi Tricks View -->
+      <section class="section-view active" id="topicsView" role="tabpanel">
+        <div class="topics-toolbar">
+          <div class="topics-title-area">
+            <h2 id="topicsViewHeading">UGC NET Desi Tricks &amp; Revision Vault</h2>
+            <p id="topicsViewSubtitle">Click any index item to jump directly to its trick and explanation</p>
+          </div>
+          <div class="topics-controls">
+            <select id="sortSelect" class="sort-select" title="Sort topics">
+              <option value="newest">🕒 Newest Added First</option>
+              <option value="alphabetical">🔤 Alphabetical (A-Z)</option>
+              <option value="paper">📑 Group by Paper (P1 / P2)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Topics Cards Container -->
+        <div class="topics-grid" id="topicsContainer">
+          <!-- Rendered dynamically via JavaScript -->
+        </div>
+
+        <!-- Empty State for Topics -->
+        <div class="empty-state" id="topicsEmptyState" style="display: none;">
+          <div class="empty-icon">💡</div>
+          <h3 class="empty-title">No Topics Found</h3>
+          <p class="empty-desc">No topics match your current filter or search criteria. Add a new topic or clear search filters to view your notes.</p>
+          <button type="button" class="btn-primary" id="emptyStateAddBtn">➕ Add First Topic</button>
+        </div>
+      </section>
+
+      <!-- SECTION 3: Notepad (General Points Scratchpad) -->
+      <section class="section-view" id="notepadView" role="tabpanel">
+        <div class="notepad-container">
+          <div class="notepad-header">
+            <div class="notepad-title-group">
+              <h2><span>📝</span> General Revision Points &amp; Scratchpad</h2>
+              <span class="notepad-sync-pill" id="notepadSyncStatus">
+                <span>●</span> Saved locally
+              </span>
+            </div>
+            <div class="notepad-actions">
+              <button type="button" class="btn-secondary" id="downloadNotepadBtn" title="Download notes as TXT file">
+                📥 Export TXT
+              </button>
+              <button type="button" class="btn-secondary" id="clearNotepadBtn" title="Clear notepad content">
+                🧹 Clear
+              </button>
+            </div>
+          </div>
+
+          <textarea 
+            id="notepadEditor" 
+            class="notepad-editor" 
+            placeholder="Write your general revision points, exam strategies, daily formulas, or quick thoughts here... (Automatically saved)"
+            spellcheck="false"
+          ></textarea>
+
+          <div class="notepad-footer">
+            <span id="notepadStats">0 words • 0 characters</span>
+            <span id="notepadLastSaved">Auto-saved</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION 4: Recycle Bin -->
+      <section class="section-view" id="binView" role="tabpanel">
+        <div class="bin-header-bar">
+          <div>
+            <h2 style="font-family: var(--font-heading); font-size: 1.5rem; font-weight: 800;">
+              <span>🗑️</span> Recycle Bin
+            </h2>
+            <p style="font-size: 0.88rem; color: var(--text-muted); margin-top: 2px;">
+              Deleted topics can be restored back to the index or permanently removed.
+            </p>
+          </div>
+          <button type="button" class="btn-danger-outline" id="emptyBinBtn">
+            <span>⚠️</span> Empty Entire Bin
+          </button>
+        </div>
+
+        <div id="binContainer">
+          <!-- Rendered dynamically via JavaScript -->
+        </div>
+
+        <div class="empty-state" id="binEmptyState" style="display: none;">
+          <div class="empty-icon">🍃</div>
+          <h3 class="empty-title">Recycle Bin is Empty</h3>
+          <p class="empty-desc">Items you delete from the Topics section will safely appear here for restoration.</p>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- MODAL: Add / Edit Topic Modal -->
+  <div class="modal-overlay" id="topicModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" id="topicModalTitle">
+          <span>💡</span> Add New Study Topic &amp; Desi Trick
+        </h3>
+        <button type="button" class="btn-modal-close" id="closeTopicModalBtn" aria-label="Close modal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="topicForm">
+          <input type="hidden" id="topicIdInput">
+
+          <!-- Topic Name (Visible on Index Page) -->
+          <div class="form-group">
+            <label class="form-label" for="topicTitleInput">
+              Topic Name <strong style="color: var(--primary);">* (Visible on Index section)</strong>
+            </label>
+            <input 
+              type="text" 
+              id="topicTitleInput" 
+              class="form-input" 
+              placeholder="e.g. OSI Model 7 Layers or Scales of Measurement (NOIR)" 
+              required
+            >
+          </div>
+
+          <!-- Paper & Unit Classification -->
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label" for="topicPaperInput">UGC NET Paper</label>
+              <select id="topicPaperInput" class="form-select">
+                <option value="P1">Paper 1 (General / Teaching &amp; Research)</option>
+                <option value="P2">Paper 2 (Computer Science &amp; Applications)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="topicUnitInput">Unit / Subject Category</label>
+              <input 
+                type="text" 
+                id="topicUnitInput" 
+                class="form-input" 
+                placeholder="e.g. Unit 9: Computer Networks, Unit 2: Research Aptitude"
+              >
+            </div>
+          </div>
+
+          <!-- Distinct Box 1: Desi Trick Input -->
+          <div class="form-group">
+            <label class="form-label" for="topicTrickInput" style="color: var(--desi-trick-badge); font-weight: 700;">
+              ✨ Desi Trick / देशी जुगाड़ / Memory Hook
+            </label>
+            <textarea 
+              id="topicTrickInput" 
+              class="form-textarea" 
+              placeholder="e.g. 'Pyari Didi Ne Transport Se Pizza Allot kiya' or 'NOIR film - Nominal, Ordinal, Interval, Ratio'"
+              required
+            ></textarea>
+            <p class="editor-hint">This punchy trick will be prominently highlighted in the golden Desi Trick box with a one-click copy button!</p>
+          </div>
+
+          <!-- Distinct Box 2: Explanation Rich-Text Editor -->
+          <div class="form-group">
+            <label class="form-label">
+              📖 Explanation (Word-like Rich Text: Font colors, Bold, Underline, Bullets, Images)
+            </label>
+            
+            <div class="editor-container">
+              <!-- Rich-Text Toolbar -->
+              <div class="editor-toolbar" id="editorToolbar">
+                <button type="button" class="editor-btn" data-command="bold" title="Bold (Ctrl+B)"><strong>B</strong></button>
+                <button type="button" class="editor-btn" data-command="italic" title="Italic (Ctrl+I)"><em>I</em></button>
+                <button type="button" class="editor-btn" data-command="underline" title="Underline (Ctrl+U)"><u>U</u></button>
+                <button type="button" class="editor-btn" data-command="strikeThrough" title="Strikethrough"><s>S</s></button>
+                
+                <span class="editor-separator"></span>
+
+                <button type="button" class="editor-btn" data-command="formatBlock" data-val="h2" title="Heading 2">H2</button>
+                <button type="button" class="editor-btn" data-command="formatBlock" data-val="h3" title="Heading 3">H3</button>
+                <button type="button" class="editor-btn" data-command="formatBlock" data-val="p" title="Paragraph">P</button>
+
+                <span class="editor-separator"></span>
+
+                <!-- Text Color Picker -->
+                <label title="Font Color" style="display:flex; align-items:center; cursor:pointer;" class="editor-btn">
+                  <span style="font-weight:bold; color:#ef4444; font-size: 0.95rem;">A</span>
+                  <input type="color" id="foreColorPicker" class="color-picker-input" value="#6366f1" style="display:none;">
+                </label>
+
+                <!-- Text Background / Highlight Color Picker -->
+                <label title="Highlight Color" style="display:flex; align-items:center; cursor:pointer;" class="editor-btn">
+                  <span style="background:#fef08a; color:#854d0e; padding:1px 4px; border-radius:2px; font-weight:bold; font-size:0.8rem;">HL</span>
+                  <input type="color" id="hiliteColorPicker" class="color-picker-input" value="#fef08a" style="display:none;">
+                </label>
+
+                <span class="editor-separator"></span>
+
+                <button type="button" class="editor-btn" data-command="insertUnorderedList" title="Bulleted List">• List</button>
+                <button type="button" class="editor-btn" data-command="insertOrderedList" title="Numbered List">1. List</button>
+
+                <span class="editor-separator"></span>
+
+                <!-- Image Upload Button -->
+                <label class="editor-btn" title="Add Image (or paste image directly from clipboard Ctrl+V)" style="cursor: pointer;">
+                  <span>🖼️</span>
+                  <input type="file" id="imageFileInput" accept="image/*" style="display: none;">
+                </label>
+
+                <button type="button" class="editor-btn" data-command="removeFormat" title="Clear Formatting">🧹</button>
+              </div>
+
+              <!-- Editable Area (Allows pasting rich formatted text & screenshots directly!) -->
+              <div 
+                id="topicExplanationEditor" 
+                class="editor-content-area" 
+                contenteditable="true"
+                data-placeholder="Paste explanation as-is from MS Word, websites, or PDFs with font colors, tables, and images..."
+              ></div>
+            </div>
+            <p class="editor-hint">💡 <strong>Pro-Tip:</strong> You can directly paste formatted text or copy &amp; paste screenshots (<kbd>Ctrl+V</kbd>) into this box!</p>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="cancelTopicModalBtn">Cancel</button>
+        <button type="button" class="btn-primary" id="saveTopicBtn">
+          <span>💾</span> Save Topic (Show in Index)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Backup & Restore Data Modal -->
+  <div class="modal-overlay" id="backupModal">
+    <div class="modal-box" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 class="modal-title"><span>💾</span> Backup &amp; Restore Your Data</h3>
+        <button type="button" class="btn-modal-close" id="closeBackupModalBtn">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+          Export your NathKhat study notes, desi tricks, and notepad content as a portable JSON file, or restore a previous backup.
+        </p>
+
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          <div style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-card);">
+            <h4 style="font-size: 0.95rem; margin-bottom: 0.35rem; color: var(--text-main);">📥 Export Data</h4>
+            <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.75rem;">Download a JSON backup of all your active topics, notepad, and recycle bin.</p>
+            <button type="button" class="btn-primary" id="exportJsonBtn">Download Backup (JSON)</button>
+          </div>
+
+          <div style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-card);">
+            <h4 style="font-size: 0.95rem; margin-bottom: 0.35rem; color: var(--text-main);">📤 Restore / Import Data</h4>
+            <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.75rem;">Select a previously downloaded NathKhat JSON file to restore.</p>
+            <input type="file" id="importJsonInput" accept=".json" style="font-size: 0.85rem;">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="closeBackupModalFooterBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <!-- Application Logic Scripts -->
+  <script src="js/seed-data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
