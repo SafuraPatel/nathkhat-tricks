@@ -586,11 +586,11 @@ function renderTopics() {
         </div>
       </div>
 
-      <!-- Distinct Box 1: Desi Tricks Box -->
+      <!-- Distinct Box 1: Tricks Box -->
       <div class="desi-trick-box">
         <div class="desi-trick-header">
           <span class="desi-trick-tag">
-            <span>💡</span> DESI TRICK / देशी जुगाड़
+            <span>💡</span> Tricks
           </span>
           <button type="button" class="btn-copy-trick" data-action="copy-trick" data-trick="${encodeURIComponent(topic.trick)}">
             <span>📋</span> Copy Trick
@@ -616,7 +616,7 @@ function renderTopics() {
     card.querySelector('[data-action="copy-trick"]').addEventListener('click', (e) => {
       const trickText = decodeURIComponent(e.currentTarget.getAttribute('data-trick'));
       navigator.clipboard.writeText(trickText).then(() => {
-        showToast('Desi Trick copied to clipboard!', 'success');
+        showToast('Trick copied to clipboard!', 'success');
       }).catch(() => {
         showToast('Copied to clipboard', 'info');
       });
@@ -633,7 +633,7 @@ function renderTopics() {
 
 function openAddTopicModal() {
   STATE.editingTopicId = null;
-  DOM.topicModalTitle.innerHTML = '<span>💡</span> Add New Study Topic &amp; Desi Trick';
+  DOM.topicModalTitle.innerHTML = '<span>💡</span> Add New Study Topic &amp; Trick';
   DOM.topicIdInput.value = '';
   DOM.topicTitleInput.value = '';
   DOM.topicPaperInput.value = STATE.activePaper !== 'ALL' ? STATE.activePaper : 'P1';
@@ -650,7 +650,7 @@ function openEditTopicModal(topicId) {
   if (!topic) return;
 
   STATE.editingTopicId = topicId;
-  DOM.topicModalTitle.innerHTML = '<span>✏️</span> Edit Study Topic &amp; Desi Trick';
+  DOM.topicModalTitle.innerHTML = '<span>✏️</span> Edit Study Topic &amp; Trick';
   DOM.topicIdInput.value = topic.id;
   DOM.topicTitleInput.value = topic.title;
   DOM.topicPaperInput.value = topic.paper;
@@ -704,7 +704,7 @@ function saveTopicForm() {
   }
 
   if (!trick) {
-    showToast('Please enter a Desi Trick or memory hook', 'error');
+    showToast('Please enter a Trick or memory hook', 'error');
     DOM.topicTrickInput.focus();
     return;
   }
