@@ -69,11 +69,12 @@
   --shadow-glow: 0 0 24px rgba(99, 102, 241, 0.45);
   --shadow-trick: 0 8px 32px rgba(245, 158, 11, 0.25);
 
-  /* Layout Constants */
+  /* Layout Constants (10% Box Radius) */
   --sidebar-width: 330px;
   --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
+  --radius-md: 12px;
+  --radius-lg: 12px;
+  --radius-box: 12px;
   --radius-full: 9999px;
   --transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -1357,19 +1358,113 @@ mark.search-highlight {
   font-size: 0.92rem;
   color: var(--text-muted);
   line-height: 1.7;
-  white-space: pre-wrap;
   word-break: break-word;
   flex-grow: 1;
   background: rgba(0, 0, 0, 0.18);
   padding: 0.95rem 1.05rem;
-  border-radius: var(--radius-md);
+  border-radius: 12px;
   border: 1px solid var(--border-subtle);
-  max-height: 340px;
+  max-height: 380px;
   overflow-y: auto;
 }
 
 [data-theme="light"] .note-card-content {
   background: rgba(241, 245, 249, 0.75);
+}
+
+.note-card-content p {
+  margin-bottom: 0.65rem;
+}
+
+.note-card-content ul, .note-card-content ol {
+  margin: 0.5rem 0 0.75rem 1.4rem;
+}
+
+.note-card-content li {
+  margin-bottom: 0.35rem;
+}
+
+.note-card-content strong {
+  color: var(--text-main);
+}
+
+.note-card-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  margin: 0.75rem 0;
+  border: 1.5px solid var(--border-card);
+}
+
+.note-card-content table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 0.85rem 0;
+  border: 1.5px solid var(--border-card);
+  border-radius: 12px;
+  overflow: hidden;
+  font-size: 0.88rem;
+  background: var(--bg-card-solid);
+}
+
+.note-card-content th {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.28) 0%, rgba(139, 92, 246, 0.2) 100%) !important;
+  color: var(--text-main) !important;
+  padding: 8px 12px !important;
+  font-weight: 800 !important;
+  text-align: left;
+  border-bottom: 2px solid var(--border-card) !important;
+  border-right: 1px solid var(--border-subtle) !important;
+}
+
+[data-theme="light"] .note-card-content th {
+  background: linear-gradient(135deg, #e0e7ff 0%, #ede9fe 100%) !important;
+  color: #3730a3 !important;
+  border-bottom: 2px solid #c7d2fe !important;
+}
+
+.note-card-content td {
+  padding: 8px 12px !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  border-right: 1px solid var(--border-subtle) !important;
+  color: var(--text-muted) !important;
+}
+
+/* Interactive Table Control Bar (Word-like Table Controls) */
+.table-control-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0.75rem 0 0.35rem 0;
+  padding: 4px 8px;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px dashed rgba(99, 102, 241, 0.35);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  width: fit-content;
+}
+
+.btn-table-action {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-card);
+  color: var(--text-main);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: var(--transition);
+}
+
+.btn-table-action:hover {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+  transform: translateY(-1px);
 }
 
 /* ==========================================================================

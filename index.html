@@ -5,8 +5,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description"
-    content="NathKhat - Dynamic study, revision and Desi Tricks platform for UGC NET Paper 1 and Paper 2 Computer Science with index jumping, rich formatting, notepad and recycle bin.">
-  <title>NathKhat | UGC NET Paper 1 & P2 Computer Science Desi Tricks & Revision</title>
+    content="NathKhat - Dynamic study, revision and Desi Tricks platform for Paper 1 and Paper 2 Computer Science with index jumping, rich formatting, notepad and recycle bin.">
+  <title>NathKhat</title>
 
   <!-- Modern Typography from Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,10 +31,7 @@
           <span>📚</span>
         </div>
         <div class="brand-text-col">
-          <h1 class="brand-name">
-            NathKhat
-            <span class="brand-badge">UGC NET</span>
-          </h1>
+          <h1 class="brand-name">NathKhat</h1>
           <span class="brand-tagline">Paper 1 &amp; P2 (Computer Science) Desi Tricks</span>
         </div>
       </div>
@@ -62,7 +59,7 @@
         <div class="search-input-wrapper">
           <span class="search-icon">🔍</span>
           <input type="text" id="globalSearchInput" class="search-input"
-            placeholder="Search topics, desi tricks, keywords..." autocomplete="off" spellcheck="false">
+            placeholder="Search topics, tricks, keywords..." autocomplete="off" spellcheck="false">
           <div class="search-shortcuts">
             <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search">✕</button>
             <span class="kbd-shortcut" title="Press / to focus search">/</span>
@@ -197,10 +194,6 @@
                 <span>➕</span>
                 <span>Add Note</span>
               </button>
-              <button type="button" class="btn-secondary" id="clearNotepadBtn" title="Clear all notes">
-                <span>🧹</span>
-                <span>Clear All</span>
-              </button>
             </div>
           </div>
 
@@ -269,17 +262,17 @@
             <label class="form-label" for="topicTitleInput">
               Topic Name <strong style="color: var(--primary);">* (Visible on Index section)</strong>
             </label>
-            <input type="text" id="topicTitleInput" class="form-input"
-              placeholder="e.g. OSI Model 7 Layers or Scales of Measurement (NOIR)" required>
+            <input type="text" id="topicTitleInput" class="form-input" placeholder="e.g. Scales of Measurement (NOIR)"
+              required>
           </div>
 
           <!-- Paper & Unit Classification -->
           <div class="form-row-2">
             <div class="form-group">
-              <label class="form-label" for="topicPaperInput">UGC NET Paper</label>
+              <label class="form-label" for="topicPaperInput">Paper</label>
               <select id="topicPaperInput" class="form-select">
-                <option value="P1">Paper 1 (General / Teaching &amp; Research)</option>
-                <option value="P2">Paper 2 (Computer Science &amp; Applications)</option>
+                <option value="P1">P1 (Paper 1)</option>
+                <option value="P2">P2 (Computer Science)</option>
               </select>
             </div>
             <div class="form-group">
@@ -292,7 +285,7 @@
           <!-- Distinct Box 1: Desi Trick Input -->
           <div class="form-group">
             <label class="form-label" for="topicTrickInput" style="color: var(--desi-border); font-weight: 800;">
-              ✨ Desi Trick / देशी जुगाड़ / Memory Hook
+              ✨Memory Hook
             </label>
             <textarea id="topicTrickInput" class="form-textarea"
               placeholder="e.g. 'Pyari Didi Ne Transport Se Pizza Allot kiya' or 'NOIR film - Nominal, Ordinal, Interval, Ratio'"
@@ -304,11 +297,11 @@
           <!-- Distinct Box 2: Explanation Rich-Text Editor -->
           <div class="form-group">
             <label class="form-label">
-              📖 Explanation (Word-like Rich Text: Font colors, Bold, Underline, Bullets, Images)
+              📖 Explanation (Word-like Rich Text: Font colors, Bold, Underline, Bullets, Images, Tables)
             </label>
 
             <div class="editor-container">
-              <!-- Rich-Text Toolbar: B, U, H2, H3, P, A, HL, • List, 1. List, 🖼️, 📊 Table -->
+              <!-- Rich-Text Toolbar: B, U, H2, H3, P, A, HL, • List, 1. List, 🖼️, 📊 Table, ➕ Row, ➕ Col -->
               <div class="editor-toolbar" id="editorToolbar">
                 <button type="button" class="editor-btn" data-command="bold"
                   title="Bold (Ctrl+B)"><strong>B</strong></button>
@@ -362,6 +355,9 @@
                 <!-- Table Creation Button (📊 Table) -->
                 <button type="button" class="editor-btn" id="insertTableBtn"
                   title="Create / Insert Table with attractive header and smooth colors">📊 Table</button>
+                <button type="button" class="editor-btn" id="addRowBtn" title="Add Row to Table (➕ Row)">➕ Row</button>
+                <button type="button" class="editor-btn" id="addColBtn" title="Add Column to Table (➕ Col)">➕
+                  Col</button>
               </div>
 
               <!-- Editable Area (Allows pasting rich formatted text & screenshots directly!) -->
@@ -422,9 +418,9 @@
     </div>
   </div>
 
-  <!-- MODAL: Add / Edit Note Modal -->
+  <!-- MODAL: Add / Edit Note Modal (Word-like Rich Text) -->
   <div class="modal-overlay" id="noteModal">
-    <div class="modal-box modal-box-sm">
+    <div class="modal-box">
       <div class="modal-header">
         <h3 class="modal-title" id="noteModalTitle">
           <span>📝</span> Add New Note
@@ -447,11 +443,77 @@
               placeholder="e.g. Paper 1, Computer Science, Formulas, Shortcuts">
           </div>
           <div class="form-group">
-            <label class="form-label" for="noteContentInput">
-              Note Points &amp; Content <strong style="color: var(--primary);">*</strong>
+            <label class="form-label">
+              Note Points &amp; Content <strong style="color: var(--primary);">* (Word-like Rich Text)</strong>
             </label>
-            <textarea id="noteContentInput" class="form-textarea" rows="8"
-              placeholder="Write your key points, formulas, or short notes here..." required></textarea>
+            <div class="editor-container">
+              <!-- Rich-Text Toolbar for Notepad -->
+              <div class="editor-toolbar" id="noteEditorToolbar">
+                <button type="button" class="editor-btn" data-command="bold"
+                  title="Bold (Ctrl+B)"><strong>B</strong></button>
+                <button type="button" class="editor-btn" data-command="underline"
+                  title="Underline (Ctrl+U)"><u>U</u></button>
+
+                <span class="editor-separator"></span>
+
+                <button type="button" class="editor-btn" data-command="formatBlock" data-val="h2"
+                  title="Heading 2">H2</button>
+                <button type="button" class="editor-btn" data-command="formatBlock" data-val="h3"
+                  title="Heading 3">H3</button>
+                <button type="button" class="editor-btn" data-command="formatBlock" data-val="p"
+                  title="Paragraph">P</button>
+
+                <span class="editor-separator"></span>
+
+                <!-- Text Color Picker (A) -->
+                <label title="Font Color (A)" style="display:flex; align-items:center; cursor:pointer;"
+                  class="editor-btn">
+                  <span style="font-weight:900; color:#ef4444; font-size: 1rem;">A</span>
+                  <input type="color" id="noteForeColorPicker" class="color-picker-input" value="#6366f1"
+                    style="display:none;">
+                </label>
+
+                <!-- Text Background / Highlight Color Picker (HL) -->
+                <label title="Highlight Color (HL)" style="display:flex; align-items:center; cursor:pointer;"
+                  class="editor-btn">
+                  <span
+                    style="background:#fef08a; color:#854d0e; padding:1px 5px; border-radius:3px; font-weight:800; font-size:0.8rem;">HL</span>
+                  <input type="color" id="noteHiliteColorPicker" class="color-picker-input" value="#fef08a"
+                    style="display:none;">
+                </label>
+
+                <span class="editor-separator"></span>
+
+                <button type="button" class="editor-btn" data-command="insertUnorderedList" title="Bulleted List"> -
+                  List</button>
+                <button type="button" class="editor-btn" data-command="insertOrderedList" title="Numbered List"> 1.
+                  List</button>
+
+                <span class="editor-separator"></span>
+
+                <!-- Image Upload Button (🖼️) -->
+                <label class="editor-btn" title="Add Image (or paste image directly from clipboard Ctrl+V)"
+                  style="cursor: pointer;">
+                  <span>🖼️</span>
+                  <input type="file" id="noteImageFileInput" accept="image/*" style="display: none;">
+                </label>
+
+                <!-- Table Creation Button (📊 Table, ➕ Row, ➕ Col) -->
+                <button type="button" class="editor-btn" id="noteInsertTableBtn"
+                  title="Create / Insert Table with attractive header and smooth colors">📊 Table</button>
+                <button type="button" class="editor-btn" id="noteAddRowBtn" title="Add Row to Table (➕ Row)">➕
+                  Row</button>
+                <button type="button" class="editor-btn" id="noteAddColBtn" title="Add Column to Table (➕ Col)">➕
+                  Col</button>
+              </div>
+
+              <!-- Editable Area (Allows writing & pasting rich text, tables, images) -->
+              <div id="noteExplanationEditor" class="editor-content-area" contenteditable="true"
+                data-placeholder="Write your notes, key formulas, points, tables, or images here just like a Word file...">
+              </div>
+            </div>
+            <p class="editor-hint">💡 <strong>Pro-Tip:</strong> Write freely just like Word! You can paste images
+              (<kbd>Ctrl+V</kbd>), format with colors, and add rows/columns to tables with 1-click!</p>
           </div>
         </form>
       </div>

@@ -82,10 +82,9 @@ const DOM = {
   notesEmptyState: document.getElementById('notesEmptyState'),
   emptyStateAddNoteBtn: document.getElementById('emptyStateAddNoteBtn'),
   openAddNoteBtn: document.getElementById('openAddNoteBtn'),
-  clearNotepadBtn: document.getElementById('clearNotepadBtn'),
   notepadSyncStatus: document.getElementById('notepadSyncStatus'),
 
-  // Note Modal
+  // Note Modal (Word-like Rich Text)
   noteModal: document.getElementById('noteModal'),
   noteModalTitle: document.getElementById('noteModalTitle'),
   closeNoteModalBtn: document.getElementById('closeNoteModalBtn'),
@@ -95,7 +94,14 @@ const DOM = {
   noteIdInput: document.getElementById('noteIdInput'),
   noteTitleInput: document.getElementById('noteTitleInput'),
   noteTagInput: document.getElementById('noteTagInput'),
-  noteContentInput: document.getElementById('noteContentInput'),
+  noteExplanationEditor: document.getElementById('noteExplanationEditor'),
+  noteEditorToolbar: document.getElementById('noteEditorToolbar'),
+  noteForeColorPicker: document.getElementById('noteForeColorPicker'),
+  noteHiliteColorPicker: document.getElementById('noteHiliteColorPicker'),
+  noteImageFileInput: document.getElementById('noteImageFileInput'),
+  noteInsertTableBtn: document.getElementById('noteInsertTableBtn'),
+  noteAddRowBtn: document.getElementById('noteAddRowBtn'),
+  noteAddColBtn: document.getElementById('noteAddColBtn'),
 
   // Recycle Bin (Section 4)
   binContainer: document.getElementById('binContainer'),
@@ -119,6 +125,9 @@ const DOM = {
   foreColorPicker: document.getElementById('foreColorPicker'),
   hiliteColorPicker: document.getElementById('hiliteColorPicker'),
   imageFileInput: document.getElementById('imageFileInput'),
+  insertTableBtn: document.getElementById('insertTableBtn'),
+  addRowBtn: document.getElementById('addRowBtn'),
+  addColBtn: document.getElementById('addColBtn'),
 
   // Backup Modal
   backupDataBtn: document.getElementById('backupDataBtn'),
@@ -562,7 +571,7 @@ function renderTopics() {
       <div class="topic-card-header">
         <div class="topic-card-title-group">
           <div class="topic-meta-row">
-            <span class="badge-paper ${topic.paper}">${topic.paper} : ${topic.paper === 'P1' ? 'Paper 1 General' : 'Paper 2 Computer Science'}</span>
+            <span class="badge-paper ${topic.paper}">${topic.paper}:</span>
             <span class="badge-unit">${unitHighlighted}</span>
           </div>
           <h3 class="topic-card-title">${titleHighlighted}</h3>
@@ -774,54 +783,90 @@ function duplicateTopic(topicId) {
 }
 
 /* ==========================================================================
-   Rich-Text Editor Tools (WYSIWYG & Clipboard Image Paste)
+   Rich-Text Editor Tools (WYSIWYG & Table Row/Col Controls & Clipboard Paste)
    ========================================================================== */
 
 function setupRichTextEditor() {
-  // Toolbar command execution
-  DOM.editorToolbar.querySelectorAll('.editor-btn[data-command]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const command = btn.getAttribute('data-command');
-      const val = btn.getAttribute('data-val') || null;
-      document.execCommand(command, false, val);
-      DOM.topicExplanationEditor.focus();
-    });
+  // 1. Topic Explanation Editor
+  setupSingleEditor({
+    toolbar: DOM.editorToolbar,
+    editor: DOM.topicExplanationEditor,
+    foreColorPicker: DOM.foreColorPicker,
+    hiliteColorPicker: DOM.hiliteColorPicker,
+    imageFileInput: DOM.imageFileInput,
+    insertTableBtn: DOM.insertTableBtn,
+    addRowBtn: DOM.addRowBtn,
+    addColBtn: DOM.addColBtn
   });
+
+  // 2. Notepad Word-like Editor
+  if (DOM.noteExplanationEditor) {
+    setupSingleEditor({
+      toolbar: DOM.noteEditorToolbar,
+      editor: DOM.noteExplanationEditor,
+      foreColorPicker: DOM.noteForeColorPicker,
+      hiliteColorPicker: DOM.noteHiliteColorPicker,
+      imageFileInput: DOM.noteImageFileInput,
+      insertTableBtn: DOM.noteInsertTableBtn,
+      addRowBtn: DOM.noteAddRowBtn,
+      addColBtn: DOM.noteAddColBtn
+    });
+  }
+}
+
+function setupSingleEditor(config) {
+  const { toolbar, editor, foreColorPicker, hiliteColorPicker, imageFileInput, insertTableBtn, addRowBtn, addColBtn } = config;
+  if (!editor) return;
+
+  // Toolbar basic command execution (B, U, H2, H3, P, lists)
+  if (toolbar) {
+    toolbar.querySelectorAll('.editor-btn[data-command]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const command = btn.getAttribute('data-command');
+        const val = btn.getAttribute('data-val') || null;
+        document.execCommand(command, false, val);
+        editor.focus();
+      });
+    });
+  }
 
   // Text Color Picker
-  DOM.foreColorPicker.addEventListener('input', (e) => {
-    document.execCommand('foreColor', false, e.target.value);
-    DOM.topicExplanationEditor.focus();
-  });
+  if (foreColorPicker) {
+    foreColorPicker.addEventListener('input', (e) => {
+      document.execCommand('foreColor', false, e.target.value);
+      editor.focus();
+    });
+  }
 
   // Highlight Color Picker
-  DOM.hiliteColorPicker.addEventListener('input', (e) => {
-    document.execCommand('hiliteColor', false, e.target.value);
-    DOM.topicExplanationEditor.focus();
-  });
+  if (hiliteColorPicker) {
+    hiliteColorPicker.addEventListener('input', (e) => {
+      document.execCommand('hiliteColor', false, e.target.value);
+      editor.focus();
+    });
+  }
 
   // Image File Picker -> Base64 inline insertion
-  DOM.imageFileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        document.execCommand('insertImage', false, event.target.result);
-        showToast('Image inserted successfully!', 'success');
-      };
-      reader.readAsDataURL(file);
-    }
-  });
+  if (imageFileInput) {
+    imageFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          document.execCommand('insertImage', false, event.target.result);
+          showToast('Image inserted successfully!', 'success');
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
 
-  // Direct Clipboard Paste Listener (Supports pasting screenshots Ctrl+V)
-  DOM.topicExplanationEditor.addEventListener('paste', (e) => {
+  // Direct Clipboard Paste Listener (Ctrl+V screenshots / images)
+  editor.addEventListener('paste', (e) => {
     const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-    let containsImage = false;
-
     for (let i = 0; i < items.length; i++) {
       if (items[i].type.indexOf('image') !== -1) {
-        containsImage = true;
         const blob = items[i].getAsFile();
         const reader = new FileReader();
         reader.onload = (event) => {
@@ -833,46 +878,185 @@ function setupRichTextEditor() {
         break;
       }
     }
-    // If not image, default rich-text paste behavior preserves HTML formatting and colors!
   });
 
   // Table Creation Button (📊 Table)
-  const insertTableBtn = document.getElementById('insertTableBtn');
   if (insertTableBtn) {
     insertTableBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      const rowsInput = prompt('Enter number of rows (including header):', '3');
-      if (rowsInput === null) return;
-      const colsInput = prompt('Enter number of columns:', '3');
-      if (colsInput === null) return;
-
-      const rows = Math.min(Math.max(parseInt(rowsInput, 10) || 3, 2), 20);
-      const cols = Math.min(Math.max(parseInt(colsInput, 10) || 3, 1), 10);
-
-      let tableHtml = '<table class="custom-rich-table"><thead><tr>';
-      for (let c = 1; c <= cols; c++) {
-        tableHtml += `<th>Header ${c}</th>`;
-      }
-      tableHtml += '</tr></thead><tbody>';
-
-      for (let r = 1; r < rows; r++) {
-        tableHtml += '<tr>';
-        for (let c = 1; c <= cols; c++) {
-          tableHtml += `<td>Cell ${r},${c}</td>`;
-        }
-        tableHtml += '</tr>';
-      }
-      tableHtml += '</tbody></table><p><br></p>';
-
-      DOM.topicExplanationEditor.focus();
-      document.execCommand('insertHTML', false, tableHtml);
-      showToast(`Inserted ${rows}x${cols} table! Click any cell to type.`, 'success');
+      insertTableIntoEditor(editor);
     });
   }
+
+  // Table Add Row Button (➕ Row)
+  if (addRowBtn) {
+    addRowBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      addTableRowToEditor(editor);
+    });
+  }
+
+  // Table Add Column Button (➕ Col)
+  if (addColBtn) {
+    addColBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      addTableColToEditor(editor);
+    });
+  }
+
+  // Inline Click Handler on tables for Word-like floating + buttons
+  editor.addEventListener('click', (e) => {
+    const tableAddRow = e.target.closest('.table-add-row');
+    const tableAddCol = e.target.closest('.table-add-col');
+    const tableDel = e.target.closest('.table-del');
+
+    if (tableAddRow) {
+      e.preventDefault();
+      const wrapper = tableAddRow.closest('.table-wrapper');
+      const table = wrapper ? wrapper.querySelector('table') : tableAddRow.closest('table');
+      if (table) appendTableRow(table);
+    } else if (tableAddCol) {
+      e.preventDefault();
+      const wrapper = tableAddCol.closest('.table-wrapper');
+      const table = wrapper ? wrapper.querySelector('table') : tableAddCol.closest('table');
+      if (table) appendTableCol(table);
+    } else if (tableDel) {
+      e.preventDefault();
+      if (confirm('Delete this table?')) {
+        const wrapper = tableDel.closest('.table-wrapper');
+        if (wrapper) wrapper.remove();
+        else {
+          const table = tableDel.closest('table');
+          if (table) table.remove();
+        }
+        showToast('Table deleted', 'info');
+      }
+    }
+  });
+}
+
+function insertTableIntoEditor(editor) {
+  const rowsInput = prompt('Enter number of rows (including header):', '3');
+  if (rowsInput === null) return;
+  const colsInput = prompt('Enter number of columns:', '3');
+  if (colsInput === null) return;
+
+  const rows = Math.min(Math.max(parseInt(rowsInput, 10) || 3, 2), 20);
+  const cols = Math.min(Math.max(parseInt(colsInput, 10) || 3, 1), 10);
+
+  let tableHtml = '<div class="table-wrapper"><div class="table-control-bar"><button type="button" class="btn-table-action table-add-row" title="Add Row">➕ Row</button><button type="button" class="btn-table-action table-add-col" title="Add Column">➕ Col</button><button type="button" class="btn-table-action table-del" title="Delete Table">🗑️</button></div><table class="custom-rich-table"><thead><tr>';
+  for (let c = 1; c <= cols; c++) {
+    tableHtml += `<th>Header ${c}</th>`;
+  }
+  tableHtml += '</tr></thead><tbody>';
+
+  for (let r = 1; r < rows; r++) {
+    tableHtml += '<tr>';
+    for (let c = 1; c <= cols; c++) {
+      tableHtml += `<td>Cell ${r},${c}</td>`;
+    }
+    tableHtml += '</tr>';
+  }
+  tableHtml += '</tbody></table></div><p><br></p>';
+
+  editor.focus();
+  document.execCommand('insertHTML', false, tableHtml);
+  showToast(`Inserted ${rows}x${cols} table! Click cells to type or use + to add rows/cols.`, 'success');
+}
+
+function appendTableRow(table) {
+  const tbody = table.querySelector('tbody') || table;
+  let colCount = 0;
+  const ths = table.querySelectorAll('thead th');
+  if (ths.length > 0) colCount = ths.length;
+  else {
+    const firstTr = table.querySelector('tr');
+    colCount = firstTr ? firstTr.children.length : 3;
+  }
+
+  const rowNum = tbody.querySelectorAll('tr').length + 1;
+  const newTr = document.createElement('tr');
+  for (let c = 1; c <= colCount; c++) {
+    const td = document.createElement('td');
+    td.textContent = `Cell ${rowNum},${c}`;
+    newTr.appendChild(td);
+  }
+  tbody.appendChild(newTr);
+  showToast('Added row to table (➕ Row)', 'success');
+  newTr.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function appendTableCol(table) {
+  const headerTr = table.querySelector('thead tr') || table.querySelector('tr');
+  if (headerTr) {
+    const newColNum = headerTr.children.length + 1;
+    const th = document.createElement('th');
+    th.textContent = `Header ${newColNum}`;
+    headerTr.appendChild(th);
+  }
+
+  const colIdx = headerTr ? headerTr.children.length : 1;
+  const bodyRows = table.querySelectorAll('tbody tr');
+  bodyRows.forEach((tr, rIdx) => {
+    const td = document.createElement('td');
+    td.textContent = `Cell ${rIdx + 1},${colIdx}`;
+    tr.appendChild(td);
+  });
+  showToast('Added column to table (➕ Col)', 'success');
+}
+
+function addTableRowToEditor(editor) {
+  const selection = window.getSelection();
+  let table = null;
+  if (selection.rangeCount > 0) {
+    let node = selection.anchorNode;
+    while (node && node !== editor) {
+      if (node.nodeName === 'TABLE') {
+        table = node;
+        break;
+      }
+      node = node.parentNode;
+    }
+  }
+  if (!table) {
+    const tables = editor.querySelectorAll('table');
+    if (tables.length > 0) table = tables[tables.length - 1];
+  }
+
+  if (!table) {
+    showToast('Please insert a table first or click inside a table to add row', 'info');
+    return;
+  }
+  appendTableRow(table);
+}
+
+function addTableColToEditor(editor) {
+  const selection = window.getSelection();
+  let table = null;
+  if (selection.rangeCount > 0) {
+    let node = selection.anchorNode;
+    while (node && node !== editor) {
+      if (node.nodeName === 'TABLE') {
+        table = node;
+        break;
+      }
+      node = node.parentNode;
+    }
+  }
+  if (!table) {
+    const tables = editor.querySelectorAll('table');
+    if (tables.length > 0) table = tables[tables.length - 1];
+  }
+
+  if (!table) {
+    showToast('Please insert a table first or click inside a table to add column', 'info');
+    return;
+  }
+  appendTableCol(table);
 }
 
 /* ==========================================================================
-   SECTION 3: Notepad (Multi-Note System & CRUD)
+   SECTION 3: Notepad (Multi-Note System & Word-like Rich Text)
    ========================================================================== */
 
 function renderNotepad() {
@@ -903,6 +1087,9 @@ function renderNotes() {
 
     const tagHtml = note.tag ? `<span class="note-card-tag">${escapeHtml(note.tag)}</span>` : '';
 
+    // Render content with rich-text HTML support!
+    const noteHtmlContent = sanitizeHtml(note.content);
+
     card.innerHTML = `
       <div class="note-card-header">
         <div class="note-card-title-group">
@@ -924,7 +1111,7 @@ function renderNotes() {
           </button>
         </div>
       </div>
-      <div class="note-card-content">${escapeHtml(note.content)}</div>
+      <div class="note-card-content">${noteHtmlContent}</div>
     `;
 
     // Action Listeners
@@ -945,7 +1132,9 @@ function openAddNoteModal() {
   DOM.noteIdInput.value = '';
   DOM.noteTitleInput.value = '';
   DOM.noteTagInput.value = '';
-  DOM.noteContentInput.value = '';
+  if (DOM.noteExplanationEditor) {
+    DOM.noteExplanationEditor.innerHTML = '';
+  }
   DOM.noteModalTitle.innerHTML = '<span>📝</span> Add New Note';
   DOM.noteModal.classList.add('open');
   setTimeout(() => DOM.noteTitleInput.focus(), 100);
@@ -959,7 +1148,9 @@ function openEditNoteModal(noteId) {
   DOM.noteIdInput.value = note.id;
   DOM.noteTitleInput.value = note.title;
   DOM.noteTagInput.value = note.tag || '';
-  DOM.noteContentInput.value = note.content;
+  if (DOM.noteExplanationEditor) {
+    DOM.noteExplanationEditor.innerHTML = note.content;
+  }
   DOM.noteModalTitle.innerHTML = '<span>✏️</span> Edit Note';
   DOM.noteModal.classList.add('open');
   setTimeout(() => DOM.noteTitleInput.focus(), 100);
@@ -968,6 +1159,9 @@ function openEditNoteModal(noteId) {
 function closeNoteModal() {
   DOM.noteModal.classList.remove('open');
   DOM.noteForm.reset();
+  if (DOM.noteExplanationEditor) {
+    DOM.noteExplanationEditor.innerHTML = '';
+  }
   STATE.editingNoteId = null;
 }
 
@@ -976,7 +1170,8 @@ function saveNoteForm(e) {
 
   const title = DOM.noteTitleInput.value.trim();
   const tag = DOM.noteTagInput.value.trim();
-  const content = DOM.noteContentInput.value.trim();
+  const rawContent = DOM.noteExplanationEditor ? DOM.noteExplanationEditor.innerHTML.trim() : '';
+  const textCheck = DOM.noteExplanationEditor ? DOM.noteExplanationEditor.textContent.trim() : '';
 
   if (!title) {
     showToast('Please enter a note title', 'error');
@@ -984,11 +1179,13 @@ function saveNoteForm(e) {
     return;
   }
 
-  if (!content) {
+  if (!textCheck && !rawContent.includes('<img') && !rawContent.includes('<table')) {
     showToast('Please write some content for the note', 'error');
-    DOM.noteContentInput.focus();
+    if (DOM.noteExplanationEditor) DOM.noteExplanationEditor.focus();
     return;
   }
+
+  const content = sanitizeHtml(rawContent);
 
   if (STATE.editingNoteId) {
     // Update existing note
@@ -1037,14 +1234,18 @@ function copyNote(noteId) {
   const note = STATE.notes.find(n => n.id === noteId);
   if (!note) return;
 
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = note.content;
+  const plainText = tempDiv.innerText || tempDiv.textContent || '';
+
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(note.content).then(() => {
+    navigator.clipboard.writeText(plainText).then(() => {
       showToast('Note content copied to clipboard!', 'success');
     }).catch(() => {
-      fallbackCopyText(note.content);
+      fallbackCopyText(plainText);
     });
   } else {
-    fallbackCopyText(note.content);
+    fallbackCopyText(plainText);
   }
 }
 
@@ -1058,19 +1259,6 @@ function fallbackCopyText(text) {
   showToast('Note content copied!', 'success');
 }
 
-function clearAllNotes() {
-  if (!STATE.notes || STATE.notes.length === 0) {
-    showToast('Notepad is already empty', 'info');
-    return;
-  }
-  if (confirm('Are you sure you want to clear all notes from your notepad? This cannot be undone.')) {
-    STATE.notes = [];
-    saveNotes();
-    updateBadges();
-    renderNotes();
-    showToast('All notes cleared from notepad', 'info');
-  }
-}
 
 /* ==========================================================================
    SECTION 4: Recycle Bin (Safe Trash & 1-Click Restore)
@@ -1300,8 +1488,8 @@ function setupEventListeners() {
     if (e.key === '/' && 
         document.activeElement !== DOM.globalSearchInput && 
         document.activeElement !== DOM.topicExplanationEditor &&
+        document.activeElement !== DOM.noteExplanationEditor &&
         document.activeElement !== DOM.noteTitleInput &&
-        document.activeElement !== DOM.noteContentInput &&
         document.activeElement !== DOM.noteTagInput) {
       e.preventDefault();
       DOM.globalSearchInput.focus();
@@ -1344,7 +1532,6 @@ function setupEventListeners() {
   // Notepad & Note Modal Controls
   if (DOM.openAddNoteBtn) DOM.openAddNoteBtn.addEventListener('click', openAddNoteModal);
   if (DOM.emptyStateAddNoteBtn) DOM.emptyStateAddNoteBtn.addEventListener('click', openAddNoteModal);
-  if (DOM.clearNotepadBtn) DOM.clearNotepadBtn.addEventListener('click', clearAllNotes);
   if (DOM.closeNoteModalBtn) DOM.closeNoteModalBtn.addEventListener('click', closeNoteModal);
   if (DOM.cancelNoteModalBtn) DOM.cancelNoteModalBtn.addEventListener('click', closeNoteModal);
   if (DOM.saveNoteBtn) DOM.saveNoteBtn.addEventListener('click', saveNoteForm);
