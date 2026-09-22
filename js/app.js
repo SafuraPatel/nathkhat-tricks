@@ -8,6 +8,8 @@
 const STATE = {
   topics: [],
   bin: [],
+  notes: [],
+  editingNoteId: null,
   notepad: '',
   theme: 'dark',
   activePaper: 'ALL', // 'ALL' | 'P1' | 'P2'
@@ -22,6 +24,7 @@ const STATE = {
 const STORAGE_KEYS = {
   TOPICS: 'nathkhat_topics_v1',
   BIN: 'nathkhat_bin_v1',
+  NOTES: 'nathkhat_notes_v1',
   NOTEPAD: 'nathkhat_notepad_v1',
   THEME: 'nathkhat_theme_v1'
 };
@@ -49,6 +52,7 @@ const DOM = {
   tabNotepadView: document.getElementById('tabNotepadView'),
   tabBinView: document.getElementById('tabBinView'),
   activeTopicsBadge: document.getElementById('activeTopicsBadge'),
+  notesCountBadge: document.getElementById('notesCountBadge'),
   binCountBadge: document.getElementById('binCountBadge'),
   quickStatsText: document.getElementById('quickStatsText'),
 
@@ -73,13 +77,25 @@ const DOM = {
   openAddTopicBtn: document.getElementById('openAddTopicBtn'),
   emptyStateAddBtn: document.getElementById('emptyStateAddBtn'),
 
-  // Notepad (Section 3)
-  notepadEditor: document.getElementById('notepadEditor'),
-  notepadSyncStatus: document.getElementById('notepadSyncStatus'),
-  notepadStats: document.getElementById('notepadStats'),
-  notepadLastSaved: document.getElementById('notepadLastSaved'),
-  downloadNotepadBtn: document.getElementById('downloadNotepadBtn'),
+  // Notepad (Section 3: Multi-Note Cards)
+  notesContainer: document.getElementById('notesContainer'),
+  notesEmptyState: document.getElementById('notesEmptyState'),
+  emptyStateAddNoteBtn: document.getElementById('emptyStateAddNoteBtn'),
+  openAddNoteBtn: document.getElementById('openAddNoteBtn'),
   clearNotepadBtn: document.getElementById('clearNotepadBtn'),
+  notepadSyncStatus: document.getElementById('notepadSyncStatus'),
+
+  // Note Modal
+  noteModal: document.getElementById('noteModal'),
+  noteModalTitle: document.getElementById('noteModalTitle'),
+  closeNoteModalBtn: document.getElementById('closeNoteModalBtn'),
+  cancelNoteModalBtn: document.getElementById('cancelNoteModalBtn'),
+  saveNoteBtn: document.getElementById('saveNoteBtn'),
+  noteForm: document.getElementById('noteForm'),
+  noteIdInput: document.getElementById('noteIdInput'),
+  noteTitleInput: document.getElementById('noteTitleInput'),
+  noteTagInput: document.getElementById('noteTagInput'),
+  noteContentInput: document.getElementById('noteContentInput'),
 
   // Recycle Bin (Section 4)
   binContainer: document.getElementById('binContainer'),
@@ -165,13 +181,34 @@ function loadStoredData() {
     }
   }
 
-  // Load Notepad
-  const savedNotepad = localStorage.getItem(STORAGE_KEYS.NOTEPAD);
-  if (savedNotepad !== null) {
-    STATE.notepad = savedNotepad;
+  // Load Notes (Multi-Note Cards System with legacy notepad migration)
+  const savedNotes = localStorage.getItem(STORAGE_KEYS.NOTES);
+  if (savedNotes) {
+    try {
+      STATE.notes = JSON.parse(savedNotes);
+    } catch (e) {
+      STATE.notes = [];
+    }
   } else {
-    STATE.notepad = typeof SEED_NOTEPAD !== 'undefined' ? SEED_NOTEPAD : '';
-    saveNotepad();
+    // Check if user has legacy raw notepad text to migrate
+    const legacyNotepad = localStorage.getItem(STORAGE_KEYS.NOTEPAD);
+    if (legacyNotepad && legacyNotepad.trim().length > 0) {
+      STATE.notes = [
+        {
+          id: 'note-' + Date.now(),
+          title: 'General Revision Points',
+          tag: 'Revision',
+          content: legacyNotepad,
+          createdAt: Date.now(),
+          updatedAt: Date.now()
+        }
+      ];
+    } else if (typeof SEED_NOTES !== 'undefined') {
+      STATE.notes = [...SEED_NOTES];
+    } else {
+      STATE.notes = [];
+    }
+    saveNotes();
   }
 }
 
@@ -181,6 +218,11 @@ function saveTopics() {
 
 function saveBin() {
   localStorage.setItem(STORAGE_KEYS.BIN, JSON.stringify(STATE.bin));
+}
+
+function saveNotes() {
+  localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(STATE.notes));
+  if (DOM.notesCountBadge) DOM.notesCountBadge.textContent = STATE.notes.length;
 }
 
 function saveNotepad() {
@@ -286,16 +328,28 @@ function updateBadges() {
   const p1Count = STATE.topics.filter(t => t.paper === 'P1').length;
   const p2Count = STATE.topics.filter(t => t.paper === 'P2').length;
   const binCount = STATE.bin.length;
+  const notesCount = STATE.notes ? STATE.notes.length : 0;
 
   DOM.countAllBadge.textContent = total;
   DOM.countP1Badge.textContent = p1Count;
   DOM.countP2Badge.textContent = p2Count;
   DOM.activeTopicsBadge.textContent = total;
   DOM.binCountBadge.textContent = binCount;
+  if (DOM.notesCountBadge) DOM.notesCountBadge.textContent = notesCount;
   if (DOM.indexCountBadge) DOM.indexCountBadge.textContent = total;
   if (DOM.quickStatsText) {
     DOM.quickStatsText.textContent = `${total} Topics Ready • P1: ${p1Count} | P2: ${p2Count}`;
   }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 /* ==========================================================================
@@ -818,56 +872,203 @@ function setupRichTextEditor() {
 }
 
 /* ==========================================================================
-   SECTION 3: Notepad (General Points & Scratchpad)
+   SECTION 3: Notepad (Multi-Note System & CRUD)
    ========================================================================== */
 
-let notepadSaveTimeout = null;
-
 function renderNotepad() {
-  DOM.notepadEditor.value = STATE.notepad;
-  updateNotepadStats();
+  renderNotes();
 }
 
-function handleNotepadInput() {
-  STATE.notepad = DOM.notepadEditor.value;
-  DOM.notepadSyncStatus.className = 'notepad-sync-pill saving';
-  DOM.notepadSyncStatus.innerHTML = '<span>●</span> Saving...';
+function renderNotes() {
+  if (!DOM.notesContainer) return;
+  DOM.notesContainer.innerHTML = '';
 
-  updateNotepadStats();
+  if (!STATE.notes || STATE.notes.length === 0) {
+    if (DOM.notesEmptyState) DOM.notesEmptyState.style.display = 'block';
+    return;
+  }
 
-  // Debounced auto-save to localStorage
-  clearTimeout(notepadSaveTimeout);
-  notepadSaveTimeout = setTimeout(() => {
-    saveNotepad();
-    DOM.notepadSyncStatus.className = 'notepad-sync-pill';
-    DOM.notepadSyncStatus.innerHTML = '<span>●</span> Saved locally';
-    DOM.notepadLastSaved.textContent = `Auto-saved at ${new Date().toLocaleTimeString()}`;
-  }, 400);
+  if (DOM.notesEmptyState) DOM.notesEmptyState.style.display = 'none';
+
+  STATE.notes.forEach(note => {
+    const card = document.createElement('div');
+    card.className = 'note-card';
+    card.id = `note-${note.id}`;
+
+    const dateStr = new Date(note.updatedAt || note.createdAt || Date.now()).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+
+    const tagHtml = note.tag ? `<span class="note-card-tag">${escapeHtml(note.tag)}</span>` : '';
+
+    card.innerHTML = `
+      <div class="note-card-header">
+        <div class="note-card-title-group">
+          <div class="note-card-title">${escapeHtml(note.title)}</div>
+          <div class="note-card-meta">
+            ${tagHtml}
+            <span class="note-card-date">🕒 ${dateStr}</span>
+          </div>
+        </div>
+        <div class="note-card-actions">
+          <button type="button" class="btn-card-action edit-note-btn" title="Edit Note" aria-label="Edit Note">
+            ✏️
+          </button>
+          <button type="button" class="btn-card-action copy-note-btn" title="Copy Note Content" aria-label="Copy Note">
+            📋
+          </button>
+          <button type="button" class="btn-card-action delete-note-btn" title="Delete Note" aria-label="Delete Note">
+            🗑️
+          </button>
+        </div>
+      </div>
+      <div class="note-card-content">${escapeHtml(note.content)}</div>
+    `;
+
+    // Action Listeners
+    const editBtn = card.querySelector('.edit-note-btn');
+    const copyBtn = card.querySelector('.copy-note-btn');
+    const deleteBtn = card.querySelector('.delete-note-btn');
+
+    editBtn.addEventListener('click', () => openEditNoteModal(note.id));
+    copyBtn.addEventListener('click', () => copyNote(note.id));
+    deleteBtn.addEventListener('click', () => deleteNote(note.id));
+
+    DOM.notesContainer.appendChild(card);
+  });
 }
 
-function updateNotepadStats() {
-  const text = DOM.notepadEditor.value.trim();
-  const wordCount = text ? text.split(/\s+/).length : 0;
-  const charCount = text.length;
-  DOM.notepadStats.textContent = `${wordCount} words • ${charCount} characters`;
+function openAddNoteModal() {
+  STATE.editingNoteId = null;
+  DOM.noteIdInput.value = '';
+  DOM.noteTitleInput.value = '';
+  DOM.noteTagInput.value = '';
+  DOM.noteContentInput.value = '';
+  DOM.noteModalTitle.innerHTML = '<span>📝</span> Add New Note';
+  DOM.noteModal.classList.add('open');
+  setTimeout(() => DOM.noteTitleInput.focus(), 100);
 }
 
-function downloadNotepad() {
-  const blob = new Blob([DOM.notepadEditor.value], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `NathKhat_UGC_NET_Revision_Notes_${new Date().toISOString().slice(0, 10)}.txt`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('Notes downloaded as TXT file', 'success');
+function openEditNoteModal(noteId) {
+  const note = STATE.notes.find(n => n.id === noteId);
+  if (!note) return;
+
+  STATE.editingNoteId = noteId;
+  DOM.noteIdInput.value = note.id;
+  DOM.noteTitleInput.value = note.title;
+  DOM.noteTagInput.value = note.tag || '';
+  DOM.noteContentInput.value = note.content;
+  DOM.noteModalTitle.innerHTML = '<span>✏️</span> Edit Note';
+  DOM.noteModal.classList.add('open');
+  setTimeout(() => DOM.noteTitleInput.focus(), 100);
 }
 
-function clearNotepad() {
-  if (confirm('Are you sure you want to clear your notepad? This cannot be undone.')) {
-    DOM.notepadEditor.value = '';
-    handleNotepadInput();
-    showToast('Notepad cleared', 'info');
+function closeNoteModal() {
+  DOM.noteModal.classList.remove('open');
+  DOM.noteForm.reset();
+  STATE.editingNoteId = null;
+}
+
+function saveNoteForm(e) {
+  if (e) e.preventDefault();
+
+  const title = DOM.noteTitleInput.value.trim();
+  const tag = DOM.noteTagInput.value.trim();
+  const content = DOM.noteContentInput.value.trim();
+
+  if (!title) {
+    showToast('Please enter a note title', 'error');
+    DOM.noteTitleInput.focus();
+    return;
+  }
+
+  if (!content) {
+    showToast('Please write some content for the note', 'error');
+    DOM.noteContentInput.focus();
+    return;
+  }
+
+  if (STATE.editingNoteId) {
+    // Update existing note
+    const note = STATE.notes.find(n => n.id === STATE.editingNoteId);
+    if (note) {
+      note.title = title;
+      note.tag = tag;
+      note.content = content;
+      note.updatedAt = Date.now();
+      showToast(`Updated note: "${title}"`, 'success');
+    }
+  } else {
+    // Create new note (add to TOP)
+    const newNote = {
+      id: 'note-' + Date.now(),
+      title,
+      tag,
+      content,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+    STATE.notes.unshift(newNote);
+    showToast(`Added new note: "${title}"`, 'success');
+  }
+
+  saveNotes();
+  updateBadges();
+  renderNotes();
+  closeNoteModal();
+}
+
+function deleteNote(noteId) {
+  const note = STATE.notes.find(n => n.id === noteId);
+  if (!note) return;
+
+  if (confirm(`Delete note "${note.title}"?`)) {
+    STATE.notes = STATE.notes.filter(n => n.id !== noteId);
+    saveNotes();
+    updateBadges();
+    renderNotes();
+    showToast(`Deleted note: "${note.title}"`, 'info');
+  }
+}
+
+function copyNote(noteId) {
+  const note = STATE.notes.find(n => n.id === noteId);
+  if (!note) return;
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(note.content).then(() => {
+      showToast('Note content copied to clipboard!', 'success');
+    }).catch(() => {
+      fallbackCopyText(note.content);
+    });
+  } else {
+    fallbackCopyText(note.content);
+  }
+}
+
+function fallbackCopyText(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  ta.remove();
+  showToast('Note content copied!', 'success');
+}
+
+function clearAllNotes() {
+  if (!STATE.notes || STATE.notes.length === 0) {
+    showToast('Notepad is already empty', 'info');
+    return;
+  }
+  if (confirm('Are you sure you want to clear all notes from your notepad? This cannot be undone.')) {
+    STATE.notes = [];
+    saveNotes();
+    updateBadges();
+    renderNotes();
+    showToast('All notes cleared from notepad', 'info');
   }
 }
 
@@ -999,6 +1200,7 @@ function exportBackupJson() {
     exportDate: new Date().toISOString(),
     topics: STATE.topics,
     bin: STATE.bin,
+    notes: STATE.notes,
     notepad: STATE.notepad
   };
 
@@ -1021,11 +1223,22 @@ function importBackupJson(e) {
       if (parsed && Array.isArray(parsed.topics)) {
         STATE.topics = parsed.topics;
         if (Array.isArray(parsed.bin)) STATE.bin = parsed.bin;
-        if (typeof parsed.notepad === 'string') STATE.notepad = parsed.notepad;
+        if (Array.isArray(parsed.notes)) {
+          STATE.notes = parsed.notes;
+        } else if (typeof parsed.notepad === 'string' && parsed.notepad.trim()) {
+          STATE.notes = [{
+            id: 'note-' + Date.now(),
+            title: 'Imported Revision Notes',
+            tag: 'Imported',
+            content: parsed.notepad,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+          }];
+        }
 
         saveTopics();
         saveBin();
-        saveNotepad();
+        saveNotes();
 
         updateBadges();
         renderIndex();
@@ -1084,13 +1297,20 @@ function setupEventListeners() {
 
   // Keyboard shortcut '/' to focus search
   window.addEventListener('keydown', (e) => {
-    if (e.key === '/' && document.activeElement !== DOM.globalSearchInput && document.activeElement !== DOM.notepadEditor && document.activeElement !== DOM.topicExplanationEditor) {
+    if (e.key === '/' && 
+        document.activeElement !== DOM.globalSearchInput && 
+        document.activeElement !== DOM.topicExplanationEditor &&
+        document.activeElement !== DOM.noteTitleInput &&
+        document.activeElement !== DOM.noteContentInput &&
+        document.activeElement !== DOM.noteTagInput) {
       e.preventDefault();
       DOM.globalSearchInput.focus();
     }
     if (e.key === 'Escape') {
       closeTopicModal();
+      closeNoteModal();
       closeBackupModal();
+      closeMobileIndex();
     }
   });
 
@@ -1113,20 +1333,22 @@ function setupEventListeners() {
   });
 
   // Add Topic Buttons
-  DOM.openAddTopicBtn.addEventListener('click', openAddTopicModal);
-  DOM.emptyStateAddBtn.addEventListener('click', openAddTopicModal);
+  if (DOM.openAddTopicBtn) DOM.openAddTopicBtn.addEventListener('click', openAddTopicModal);
+  if (DOM.emptyStateAddBtn) DOM.emptyStateAddBtn.addEventListener('click', openAddTopicModal);
 
   // Topic Modal Controls
   DOM.closeTopicModalBtn.addEventListener('click', closeTopicModal);
   DOM.cancelTopicModalBtn.addEventListener('click', closeTopicModal);
   DOM.saveTopicBtn.addEventListener('click', saveTopicForm);
 
-  // Notepad Controls
-  DOM.notepadEditor.addEventListener('input', handleNotepadInput);
-  if (DOM.downloadNotepadBtn) {
-    DOM.downloadNotepadBtn.addEventListener('click', downloadNotepad);
-  }
-  DOM.clearNotepadBtn.addEventListener('click', clearNotepad);
+  // Notepad & Note Modal Controls
+  if (DOM.openAddNoteBtn) DOM.openAddNoteBtn.addEventListener('click', openAddNoteModal);
+  if (DOM.emptyStateAddNoteBtn) DOM.emptyStateAddNoteBtn.addEventListener('click', openAddNoteModal);
+  if (DOM.clearNotepadBtn) DOM.clearNotepadBtn.addEventListener('click', clearAllNotes);
+  if (DOM.closeNoteModalBtn) DOM.closeNoteModalBtn.addEventListener('click', closeNoteModal);
+  if (DOM.cancelNoteModalBtn) DOM.cancelNoteModalBtn.addEventListener('click', closeNoteModal);
+  if (DOM.saveNoteBtn) DOM.saveNoteBtn.addEventListener('click', saveNoteForm);
+  if (DOM.noteForm) DOM.noteForm.addEventListener('submit', saveNoteForm);
 
   // Bin Controls
   DOM.emptyBinBtn.addEventListener('click', emptyBin);
@@ -1138,15 +1360,27 @@ function setupEventListeners() {
   DOM.exportJsonBtn.addEventListener('click', exportBackupJson);
   DOM.importJsonInput.addEventListener('change', importBackupJson);
 
-  // Mobile Sidebar Toggle
+  // Mobile Sidebar Toggle & Close (with touch support)
   if (DOM.mobileIndexToggleBtn) {
     DOM.mobileIndexToggleBtn.addEventListener('click', toggleMobileIndex);
   }
   if (DOM.closeMobileSidebarBtn) {
-    DOM.closeMobileSidebarBtn.addEventListener('click', closeMobileIndex);
+    DOM.closeMobileSidebarBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeMobileIndex();
+    });
+    DOM.closeMobileSidebarBtn.addEventListener('touchend', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      closeMobileIndex();
+    });
   }
   if (DOM.sidebarBackdrop) {
     DOM.sidebarBackdrop.addEventListener('click', closeMobileIndex);
+    DOM.sidebarBackdrop.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      closeMobileIndex();
+    });
   }
 
   // Setup WYSIWYG

@@ -180,6 +180,49 @@ const SEED_TOPICS = [
   }
 ];
 
+const SEED_NOTES = [
+  {
+    id: "note-seed-1",
+    title: "Paper 1 - Revision Strategy & High-Yield Rules",
+    tag: "Paper 1",
+    content: `• 50 Questions, 100 Marks (Target: 75+ Marks)
+• Master Data Interpretation (DI) and Reading Comprehension (RC) daily for guaranteed 20 marks.
+• Action Research Cycle: PLAN -> ACT -> OBSERVE -> REFLECT (PAOR).
+• Square of Opposition:
+  * A (All) & O (Some Not) are Contradictories.
+  * E (No) & I (Some) are Contradictories.
+  * A & E are Contraries (Both cannot be true together, both can be false).
+  * I & O are Sub-Contraries (Both cannot be false together, both can be true).`,
+    createdAt: Date.now() - 3600000 * 24,
+    updatedAt: Date.now() - 3600000 * 24
+  },
+  {
+    id: "note-seed-2",
+    title: "Computer Science Paper 2 - Quick Formulas & Algorithms",
+    tag: "Computer Science",
+    content: `• 100 Questions, 200 Marks (Target: 140+ Marks)
+• Decidability Table: DFA is decidable for Emptiness, Finiteness, Equivalence, Membership!
+• Time Complexities to memorize:
+  * QuickSort: Best/Avg O(n log n), Worst O(n²)
+  * MergeSort: Best/Avg/Worst O(n log n) always stable
+  * HeapSort: Best/Avg/Worst O(n log n) not stable
+  * Binary Search: O(log n)
+• Subnetting shortcut: /24 = 256 IPs, /25 = 128, /26 = 64, /27 = 32, /28 = 16, /29 = 8, /30 = 4!`,
+    createdAt: Date.now() - 3600000 * 12,
+    updatedAt: Date.now() - 3600000 * 12
+  },
+  {
+    id: "note-seed-3",
+    title: "Daily Exam Revision Routine",
+    tag: "Routine",
+    content: `• Morning 6:00 - 8:00 AM: Paper 1 Concepts & Desi Tricks review.
+• Evening 7:00 - 10:00 PM: Paper 2 Core Units (TOC, OS, DBMS, Networks).
+• Solve at least 25 PYQs with timer and note down mistakes immediately.`,
+    createdAt: Date.now() - 3600000 * 2,
+    updatedAt: Date.now() - 3600000 * 2
+  }
+];
+
 const SEED_NOTEPAD = `📝 UGC NET Revision Strategy & Important Formulas:
 
 1. Paper 1 Strategy:

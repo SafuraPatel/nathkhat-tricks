@@ -70,14 +70,8 @@
         </div>
       </div>
 
-      <!-- Header Actions (New Topic, Theme, Backup) -->
+      <!-- Header Actions (Theme, Backup) -->
       <div class="header-actions">
-        <button type="button" class="btn-primary" id="openAddTopicBtn"
-          title="Add a new topic with desi trick &amp; explanation">
-          <span>➕</span>
-          <span>Add Topic</span>
-        </button>
-
         <button type="button" class="btn-icon" id="themeToggleBtn" title="Toggle Dark / Light Theme"
           aria-label="Toggle Theme">
           <span id="themeIcon">🌙</span>
@@ -107,6 +101,7 @@
         <button type="button" class="nav-tab-btn" data-view="notepadView" id="tabNotepadView" role="tab">
           <span>📝</span>
           <span>Notepad</span>
+          <span class="tab-badge" id="notesCountBadge">0</span>
         </button>
         <button type="button" class="nav-tab-btn" data-view="binView" id="tabBinView" role="tab">
           <span>🗑️</span>
@@ -131,8 +126,8 @@
           <span>Topics Index</span>
           <span class="index-counter-badge" id="indexCountBadge">0</span>
         </div>
-        <button type="button" class="btn-card-action" id="closeMobileSidebarBtn" title="Close Index"
-          style="font-size: 1.1rem;">✕</button>
+        <button type="button" class="btn-sidebar-close" id="closeMobileSidebarBtn" title="Close Index Drawer"
+          aria-label="Close Index Drawer">✕</button>
       </div>
 
       <div class="index-filter-input-wrap">
@@ -155,10 +150,15 @@
       <section class="section-view active" id="topicsView" role="tabpanel">
         <div class="topics-toolbar">
           <div class="topics-title-area">
-            <h2 id="topicsViewHeading">UGC NET Desi Tricks &amp; Revision Vault</h2>
+            <h2 id="topicsViewHeading">Tricks &amp; Revision Vault</h2>
             <p id="topicsViewSubtitle">Click any index item to jump directly to its trick and explanation</p>
           </div>
           <div class="topics-controls">
+            <button type="button" class="btn-primary" id="openAddTopicBtn"
+              title="Add a new topic with desi trick &amp; explanation">
+              <span>➕</span>
+              <span>Add Topic</span>
+            </button>
             <select id="sortSelect" class="sort-select" title="Sort topics">
               <option value="newest">🕒 Newest Added First</option>
               <option value="alphabetical">🔤 Alphabetical (A-Z)</option>
@@ -182,30 +182,40 @@
         </div>
       </section>
 
-      <!-- SECTION 3: Notepad (General Points Scratchpad) -->
+      <!-- SECTION 3: Notepad (Multi-Note System & Scratchpad) -->
       <section class="section-view" id="notepadView" role="tabpanel">
         <div class="notepad-container">
           <div class="notepad-header">
             <div class="notepad-title-group">
-              <h2><span>📝</span> General Revision Points &amp; Scratchpad</h2>
+              <h2><span>📝</span> General Revision Points &amp; Notepad</h2>
               <span class="notepad-sync-pill" id="notepadSyncStatus">
                 <span>●</span> Saved locally
               </span>
             </div>
             <div class="notepad-actions">
-              <button type="button" class="btn-secondary" id="clearNotepadBtn" title="Clear notepad content">
-                🧹 Clear
+              <button type="button" class="btn-primary" id="openAddNoteBtn" title="Create a new note">
+                <span>➕</span>
+                <span>Add Note</span>
+              </button>
+              <button type="button" class="btn-secondary" id="clearNotepadBtn" title="Clear all notes">
+                <span>🧹</span>
+                <span>Clear All</span>
               </button>
             </div>
           </div>
 
-          <textarea id="notepadEditor" class="notepad-editor"
-            placeholder="Write your general revision points, exam strategies, daily formulas, or quick thoughts here... (Automatically saved)"
-            spellcheck="false"></textarea>
+          <!-- Notes Cards Container -->
+          <div class="notes-grid" id="notesContainer">
+            <!-- Rendered dynamically via JavaScript -->
+          </div>
 
-          <div class="notepad-footer">
-            <span id="notepadStats">0 words • 0 characters</span>
-            <span id="notepadLastSaved">Auto-saved</span>
+          <!-- Empty State for Notes -->
+          <div class="empty-state" id="notesEmptyState" style="display: none;">
+            <div class="empty-icon">📝</div>
+            <h3 class="empty-title">No Notes Yet</h3>
+            <p class="empty-desc">Create your quick revision notes, exam points, daily formulas, or key reminders here.
+            </p>
+            <button type="button" class="btn-primary" id="emptyStateAddNoteBtn">➕ Add First Note</button>
           </div>
         </div>
       </section>
@@ -300,44 +310,58 @@
             <div class="editor-container">
               <!-- Rich-Text Toolbar: B, U, H2, H3, P, A, HL, • List, 1. List, 🖼️, 📊 Table -->
               <div class="editor-toolbar" id="editorToolbar">
-                <button type="button" class="editor-btn" data-command="bold" title="Bold (Ctrl+B)"><strong>B</strong></button>
-                <button type="button" class="editor-btn" data-command="underline" title="Underline (Ctrl+U)"><u>U</u></button>
+                <button type="button" class="editor-btn" data-command="bold"
+                  title="Bold (Ctrl+B)"><strong>B</strong></button>
+                <button type="button" class="editor-btn" data-command="underline"
+                  title="Underline (Ctrl+U)"><u>U</u></button>
 
                 <span class="editor-separator"></span>
 
-                <button type="button" class="editor-btn" data-command="formatBlock" data-val="h2" title="Heading 2">H2</button>
-                <button type="button" class="editor-btn" data-command="formatBlock" data-val="h3" title="Heading 3">H3</button>
-                <button type="button" class="editor-btn" data-command="formatBlock" data-val="p" title="Paragraph">P</button>
+                <button type="button" class="editor-btn" data-command="formatBlock" data-val="h2"
+                  title="Heading 2">H2</button>
+                <button type="button" class="editor-btn" data-command="formatBlock" data-val="h3"
+                  title="Heading 3">H3</button>
+                <button type="button" class="editor-btn" data-command="formatBlock" data-val="p"
+                  title="Paragraph">P</button>
 
                 <span class="editor-separator"></span>
 
                 <!-- Text Color Picker (A) -->
-                <label title="Font Color (A)" style="display:flex; align-items:center; cursor:pointer;" class="editor-btn">
+                <label title="Font Color (A)" style="display:flex; align-items:center; cursor:pointer;"
+                  class="editor-btn">
                   <span style="font-weight:900; color:#ef4444; font-size: 1rem;">A</span>
-                  <input type="color" id="foreColorPicker" class="color-picker-input" value="#6366f1" style="display:none;">
+                  <input type="color" id="foreColorPicker" class="color-picker-input" value="#6366f1"
+                    style="display:none;">
                 </label>
 
                 <!-- Text Background / Highlight Color Picker (HL) -->
-                <label title="Highlight Color (HL)" style="display:flex; align-items:center; cursor:pointer;" class="editor-btn">
-                  <span style="background:#fef08a; color:#854d0e; padding:1px 5px; border-radius:3px; font-weight:800; font-size:0.8rem;">HL</span>
-                  <input type="color" id="hiliteColorPicker" class="color-picker-input" value="#fef08a" style="display:none;">
+                <label title="Highlight Color (HL)" style="display:flex; align-items:center; cursor:pointer;"
+                  class="editor-btn">
+                  <span
+                    style="background:#fef08a; color:#854d0e; padding:1px 5px; border-radius:3px; font-weight:800; font-size:0.8rem;">HL</span>
+                  <input type="color" id="hiliteColorPicker" class="color-picker-input" value="#fef08a"
+                    style="display:none;">
                 </label>
 
                 <span class="editor-separator"></span>
 
-                <button type="button" class="editor-btn" data-command="insertUnorderedList" title="Bulleted List">• List</button>
-                <button type="button" class="editor-btn" data-command="insertOrderedList" title="Numbered List">1. List</button>
+                <button type="button" class="editor-btn" data-command="insertUnorderedList" title="Bulleted List"> -
+                  List</button>
+                <button type="button" class="editor-btn" data-command="insertOrderedList" title="Numbered List"> 1.
+                  List</button>
 
                 <span class="editor-separator"></span>
 
                 <!-- Image Upload Button (🖼️) -->
-                <label class="editor-btn" title="Add Image (or paste image directly from clipboard Ctrl+V)" style="cursor: pointer;">
+                <label class="editor-btn" title="Add Image (or paste image directly from clipboard Ctrl+V)"
+                  style="cursor: pointer;">
                   <span>🖼️</span>
                   <input type="file" id="imageFileInput" accept="image/*" style="display: none;">
                 </label>
 
                 <!-- Table Creation Button (📊 Table) -->
-                <button type="button" class="editor-btn" id="insertTableBtn" title="Create / Insert Table with attractive header and smooth colors">📊 Table</button>
+                <button type="button" class="editor-btn" id="insertTableBtn"
+                  title="Create / Insert Table with attractive header and smooth colors">📊 Table</button>
               </div>
 
               <!-- Editable Area (Allows pasting rich formatted text & screenshots directly!) -->
@@ -394,6 +418,49 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn-secondary" id="closeBackupModalFooterBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Add / Edit Note Modal -->
+  <div class="modal-overlay" id="noteModal">
+    <div class="modal-box modal-box-sm">
+      <div class="modal-header">
+        <h3 class="modal-title" id="noteModalTitle">
+          <span>📝</span> Add New Note
+        </h3>
+        <button type="button" class="btn-modal-close" id="closeNoteModalBtn" aria-label="Close note modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="noteForm">
+          <input type="hidden" id="noteIdInput">
+          <div class="form-group">
+            <label class="form-label" for="noteTitleInput">
+              Note Heading / Title <strong style="color: var(--primary);">*</strong>
+            </label>
+            <input type="text" id="noteTitleInput" class="form-input"
+              placeholder="e.g. Paper 1 Formula Sheet or Exam Day Strategy" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="noteTagInput">Category / Tag (Optional)</label>
+            <input type="text" id="noteTagInput" class="form-input"
+              placeholder="e.g. Paper 1, Computer Science, Formulas, Shortcuts">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="noteContentInput">
+              Note Points &amp; Content <strong style="color: var(--primary);">*</strong>
+            </label>
+            <textarea id="noteContentInput" class="form-textarea" rows="8"
+              placeholder="Write your key points, formulas, or short notes here..." required></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="cancelNoteModalBtn">Cancel</button>
+        <button type="button" class="btn-primary" id="saveNoteBtn">
+          <span>💾</span>
+          <span>Save Note</span>
+        </button>
       </div>
     </div>
   </div>
