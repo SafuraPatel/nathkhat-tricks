@@ -1,6 +1,6 @@
 /**
  * NathKhat - UGC NET Paper 1 & Paper 2 (Computer Science) Seed Data
- * Curated high-yield topics with authentic Desi Tricks and rich explanations.
+ * Curated high-yield topics with authentic, clean, professional Desi Tricks.
  * Formatted with theme-adaptive styles that look gorgeous in both Dark & Light modes.
  */
 
@@ -10,7 +10,7 @@ const SEED_TOPICS = [
     title: "Scales of Measurement (Nominal, Ordinal, Interval, Ratio)",
     paper: "P1",
     unit: "Unit 2: Research Aptitude",
-    trick: "🎬 'NOIR' Film Dekho: N → O → I → R (Order of Power & Properties: Name, Order, Equal Interval, True Zero Absolute)",
+    trick: "🎬 'NOIR' Order: Nominal (Names/Labels) → Ordinal (Order/Rank) → Interval (Equal intervals, no absolute zero) → Ratio (True Absolute Zero)",
     explanation: `
       <p>In statistics and research methodology, measurement scales categorize variables into 4 distinct progressive levels:</p>
       <ul>
@@ -31,7 +31,7 @@ const SEED_TOPICS = [
     title: "OSI Model 7 Layers Architecture & Devices",
     paper: "P2",
     unit: "Unit 9: Computer Networks",
-    trick: "🍕 'Pyari Didi Ne Transport Se Pizza Allot kiya' (Physical, Data Link, Network, Transport, Session, Presentation, Application) or top-down: 'All People Seem To Need Data Processing'!",
+    trick: "🍕 Bottom-Up: 'Please Do Not Throw Sausage Pizza Away' (Physical, Data Link, Network, Transport, Session, Presentation, Application) | Top-Down: 'All People Seem To Need Data Processing'",
     explanation: `
       <p>The Open Systems Interconnection (OSI) reference model organizes network communication into 7 distinct abstraction layers:</p>
       <ol>
@@ -55,7 +55,7 @@ const SEED_TOPICS = [
     title: "SWAYAM 4 Quadrants of E-Learning",
     paper: "P1",
     unit: "Unit 8: ICT & Higher Education",
-    trick: "📱 'V-E-T-A' (Video, E-content, Test/Quiz, Assessment/Discussion Forum) - VETA se padho aur NET crack karo!",
+    trick: "📱 4 Quadrants: 'V-E-T-A' (1. Video e-Tutorial, 2. e-Content Text, 3. Tests & Quizzes, 4. Assessment & Discussion Forum)",
     explanation: `
       <p><strong>SWAYAM</strong> (Study Webs of Active-Learning for Young Aspiring Minds) is India's national MOOC platform. Every course on SWAYAM is designed around 4 distinct pedagogical quadrants:</p>
       <ul>
@@ -76,7 +76,7 @@ const SEED_TOPICS = [
     title: "Coffman Deadlock 4 Necessary Conditions",
     paper: "P2",
     unit: "Unit 7: Operating Systems",
-    trick: "🔒 'M - H - N - C' → 'Mohan Has No Car' (Mutual Exclusion, Hold and Wait, No Preemption, Circular Wait)",
+    trick: "🔒 'M - H - N - C' (1. Mutual Exclusion, 2. Hold and Wait, 3. No Preemption, 4. Circular Wait)",
     explanation: `
       <p>For a deadlock to arise in an operating system, all four <strong>Coffman conditions</strong> must hold simultaneously:</p>
       <ol>
@@ -97,7 +97,7 @@ const SEED_TOPICS = [
     title: "Chomsky Hierarchy of Grammars & Automata",
     paper: "P2",
     unit: "Unit 8: Theory of Computation",
-    trick: "👑 'U - C - C - R' (Type 0 to 3: Unrestricted, Context-Sensitive, Context-Free, Regular) → 'U Cute Cute Rani'!",
+    trick: "👑 'U - C - C - R' (Type 0 to 3): Unrestricted → Context-Sensitive → Context-Free → Regular (Memory Hook: Universal Computers Can Reason)",
     explanation: `
       <p>Noam Chomsky classified formal languages into a strict 4-level hierarchy based on the generative power of their grammars:</p>
       <table>
@@ -148,7 +148,7 @@ const SEED_TOPICS = [
     title: "Types of Research (Fundamental vs Applied vs Action)",
     paper: "P1",
     unit: "Unit 2: Research Aptitude",
-    trick: "🎯 'F-A-A' : Fundamental (Gyan badhao), Applied (Problem suljhao), Action (Turant Classroom/Field me Sudhaar lao!)",
+    trick: "🎯 Research Types: Fundamental (Theory expansion), Applied (Practical problem solving), Action (Immediate local improvement - PAOR cycle)",
     explanation: `
       <p>Research types are categorized based on purpose, application, and scope:</p>
       <ul>
@@ -199,6 +199,7 @@ const SEED_NOTEPAD = `📝 UGC NET Revision Strategy & Important Formulas:
   * QuickSort: Best/Avg O(n log n), Worst O(n²)
   * MergeSort: Best/Avg/Worst O(n log n) always stable
   * HeapSort: Best/Avg/Worst O(n log n) not stable
+  * Binary Search: O(log n)
 - Subnetting shortcut: /24 = 256 IPs, /25 = 128, /26 = 64, /27 = 32, /28 = 16, /29 = 8, /30 = 4!
 
 3. Daily Revision Routine:

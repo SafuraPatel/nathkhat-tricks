@@ -603,12 +603,36 @@ function closeTopicModal() {
   DOM.topicModal.classList.remove('open');
 }
 
+function sanitizeHtml(rawHtml) {
+  if (!rawHtml) return '';
+  const div = document.createElement('div');
+  div.innerHTML = rawHtml;
+
+  // Strip dangerous tags to keep site 100% secure
+  const unsafe = div.querySelectorAll('script, iframe, object, embed, form, input, button:not([class*="custom"]), link, meta, base');
+  unsafe.forEach(el => el.remove());
+
+  // Strip inline JavaScript execution attributes
+  const allElements = div.querySelectorAll('*');
+  allElements.forEach(el => {
+    for (let i = el.attributes.length - 1; i >= 0; i--) {
+      const attr = el.attributes[i];
+      if (attr.name.toLowerCase().startsWith('on') || attr.value.trim().toLowerCase().startsWith('javascript:')) {
+        el.removeAttribute(attr.name);
+      }
+    }
+  });
+
+  return div.innerHTML;
+}
+
 function saveTopicForm() {
   const title = DOM.topicTitleInput.value.trim();
   const paper = DOM.topicPaperInput.value;
   const unit = DOM.topicUnitInput.value.trim() || (paper === 'P1' ? 'General Aptitude' : 'Computer Science');
   const trick = DOM.topicTrickInput.value.trim();
-  const explanation = DOM.topicExplanationEditor.innerHTML.trim();
+  const rawExplanation = DOM.topicExplanationEditor.innerHTML.trim();
+  const explanation = sanitizeHtml(rawExplanation) || '<p>No detailed explanation added yet.</p>';
 
   if (!title) {
     showToast('Please enter a topic name', 'error');
@@ -634,7 +658,7 @@ function saveTopicForm() {
         paper,
         unit,
         trick,
-        explanation: explanation || '<p>No detailed explanation added yet.</p>',
+        explanation,
         updatedAt: now
       };
       // Move edited topic to TOP of array as recently updated
@@ -650,7 +674,7 @@ function saveTopicForm() {
       paper,
       unit,
       trick,
-      explanation: explanation || '<p>No detailed explanation added yet.</p>',
+      explanation,
       createdAt: now,
       updatedAt: now
     };
