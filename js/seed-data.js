@@ -1,6 +1,7 @@
 /**
  * NathKhat - UGC NET Paper 1 & Paper 2 (Computer Science) Seed Data
  * Curated high-yield topics with authentic Desi Tricks and rich explanations.
+ * Formatted with theme-adaptive styles that look gorgeous in both Dark & Light modes.
  */
 
 const SEED_TOPICS = [
@@ -11,15 +12,15 @@ const SEED_TOPICS = [
     unit: "Unit 2: Research Aptitude",
     trick: "🎬 'NOIR' Film Dekho: N → O → I → R (Order of Power & Properties: Name, Order, Equal Interval, True Zero Absolute)",
     explanation: `
-      <p>In statistics and research methodology, measurement scales categorize variables into 4 distinct levels:</p>
+      <p>In statistics and research methodology, measurement scales categorize variables into 4 distinct progressive levels:</p>
       <ul>
-        <li><strong style="color: #6366f1;">Nominal Scale:</strong> Only for naming, classification, or categorization. <em>No order, no arithmetic operations</em>. <br><span style="background-color: #fef08a; color: #1e293b; padding: 2px 6px; border-radius: 4px;">Example:</span> Gender (M/F), Blood Group (A, B, O), Jersey Numbers.</li>
-        <li><strong style="color: #3b82f6;">Ordinal Scale:</strong> Categorization <strong>+ Meaningful Rank / Order</strong>, but difference between ranks is NOT equal or quantifiable. <br><span style="background-color: #fef08a; color: #1e293b; padding: 2px 6px; border-radius: 4px;">Example:</span> Exam ranks (1st, 2nd, 3rd), Likert Scale (Agree, Neutral, Disagree).</li>
-        <li><strong style="color: #06b6d4;">Interval Scale:</strong> Order <strong>+ Equal Intervals</strong> between values, but has an <u>Arbitrary / Non-Absolute Zero</u> (0 doesn't mean total absence). <br><span style="background-color: #fef08a; color: #1e293b; padding: 2px 6px; border-radius: 4px;">Example:</span> Temperature in Celsius/Fahrenheit (0°C doesn't mean no heat), IQ Score.</li>
-        <li><strong style="color: #10b981;">Ratio Scale:</strong> Highest level. Order + Equal Distance <strong>+ TRUE ABSOLUTE ZERO</strong> (multiplication & division valid). <br><span style="background-color: #fef08a; color: #1e293b; padding: 2px 6px; border-radius: 4px;">Example:</span> Height, Weight, Distance, Age, Income.</li>
+        <li><strong style="color: #6366f1;">Nominal Scale:</strong> Only for naming, classification, or categorization. <em>No order, no arithmetic operations</em>. <br><span style="background-color: rgba(245, 158, 11, 0.2); color: #d97706; padding: 2px 7px; border-radius: 4px; font-weight: 700;">Example:</span> Gender (M/F), Blood Group (A, B, O), Jersey Numbers.</li>
+        <li><strong style="color: #3b82f6;">Ordinal Scale:</strong> Categorization <strong>+ Meaningful Rank / Order</strong>, but difference between ranks is NOT equal or quantifiable. <br><span style="background-color: rgba(245, 158, 11, 0.2); color: #d97706; padding: 2px 7px; border-radius: 4px; font-weight: 700;">Example:</span> Exam ranks (1st, 2nd, 3rd), Likert Scale (Agree, Neutral, Disagree).</li>
+        <li><strong style="color: #06b6d4;">Interval Scale:</strong> Order <strong>+ Equal Intervals</strong> between values, but has an <u>Arbitrary / Non-Absolute Zero</u> (0 doesn't mean total absence). <br><span style="background-color: rgba(245, 158, 11, 0.2); color: #d97706; padding: 2px 7px; border-radius: 4px; font-weight: 700;">Example:</span> Temperature in Celsius/Fahrenheit (0°C doesn't mean no heat), IQ Score.</li>
+        <li><strong style="color: #10b981;">Ratio Scale:</strong> Highest level. Order + Equal Distance <strong>+ TRUE ABSOLUTE ZERO</strong> (multiplication & division valid). <br><span style="background-color: rgba(245, 158, 11, 0.2); color: #d97706; padding: 2px 7px; border-radius: 4px; font-weight: 700;">Example:</span> Height, Weight, Distance, Age, Income.</li>
       </ul>
-      <p style="border-left: 4px solid #f59e0b; padding-left: 10px; margin-top: 10px; color: #d97706; font-weight: 600;">
-        💡 NET PYQ Tip: Ratio scale is the ONLY scale where ratios are meaningful (e.g. 20 kg is twice as heavy as 10 kg).
+      <p style="border-left: 4px solid #f59e0b; padding-left: 12px; margin-top: 12px; font-weight: 600;">
+        💡 <strong>NET PYQ Golden Tip:</strong> Ratio scale is the ONLY scale where ratios are meaningful (e.g. 20 kg is twice as heavy as 10 kg).
       </p>
     `,
     createdAt: Date.now() - 3600000 * 24 * 3,
@@ -34,15 +35,15 @@ const SEED_TOPICS = [
     explanation: `
       <p>The Open Systems Interconnection (OSI) reference model organizes network communication into 7 distinct abstraction layers:</p>
       <ol>
-        <li><strong style="color: #8b5cf6;">Application Layer (Layer 7):</strong> Network interface for end-user apps. Protocols: <span style="background-color: #e0e7ff; color: #3730a3; padding: 2px 6px; border-radius: 4px;">HTTP, HTTPS, FTP, SMTP, DNS</span>.</li>
-        <li><strong style="color: #6366f1;">Presentation Layer (Layer 6):</strong> Translation, Encryption/Decryption, Compression. Formats: <span style="background-color: #e0e7ff; color: #3730a3; padding: 2px 6px; border-radius: 4px;">SSL/TLS, JPEG, ASCII</span>.</li>
-        <li><strong style="color: #3b82f6;">Session Layer (Layer 5):</strong> Dialogue control, session establishment, token management, checkpoints/synchronization. Protocols: <span style="background-color: #e0e7ff; color: #3730a3; padding: 2px 6px; border-radius: 4px;">RPC, NetBIOS</span>.</li>
-        <li><strong style="color: #0ea5e9;">Transport Layer (Layer 4):</strong> End-to-End communication, flow & error control, segmentation. Protocols: <span style="background-color: #e0e7ff; color: #3730a3; padding: 2px 6px; border-radius: 4px;">TCP (Segment), UDP</span>. Devices: Gateway, L4 Switch.</li>
-        <li><strong style="color: #14b8a6;">Network Layer (Layer 3):</strong> Logical addressing (IP address) & routing. PDU = <u>Packet</u>. Devices: <span style="background-color: #fef08a; color: #854d0e; font-weight: bold; padding: 2px 6px; border-radius: 4px;">Router, Layer 3 Switch</span>.</li>
-        <li><strong style="color: #10b981;">Data Link Layer (Layer 2):</strong> Physical addressing (MAC), framing, node-to-node hop error/flow control. PDU = <u>Frame</u>. Devices: <span style="background-color: #fef08a; color: #854d0e; font-weight: bold; padding: 2px 6px; border-radius: 4px;">Bridge, Switch, NIC</span>.</li>
-        <li><strong style="color: #f59e0b;">Physical Layer (Layer 1):</strong> Raw bit transmission over physical medium. PDU = <u>Bits</u>. Devices: <span style="background-color: #fef08a; color: #854d0e; font-weight: bold; padding: 2px 6px; border-radius: 4px;">Hub, Repeater, Cables</span>.</li>
+        <li><strong style="color: #8b5cf6;">Application Layer (Layer 7):</strong> Network interface for end-user apps. Protocols: <span style="background-color: rgba(99, 102, 241, 0.15); color: #6366f1; padding: 2px 6px; border-radius: 4px; font-weight: 600;">HTTP, HTTPS, FTP, SMTP, DNS</span>.</li>
+        <li><strong style="color: #6366f1;">Presentation Layer (Layer 6):</strong> Translation, Encryption/Decryption, Compression. Formats: <span style="background-color: rgba(99, 102, 241, 0.15); color: #6366f1; padding: 2px 6px; border-radius: 4px; font-weight: 600;">SSL/TLS, JPEG, ASCII</span>.</li>
+        <li><strong style="color: #3b82f6;">Session Layer (Layer 5):</strong> Dialogue control, session establishment, token management, checkpoints/synchronization. Protocols: <span style="background-color: rgba(59, 130, 246, 0.15); color: #3b82f6; padding: 2px 6px; border-radius: 4px; font-weight: 600;">RPC, NetBIOS</span>.</li>
+        <li><strong style="color: #0ea5e9;">Transport Layer (Layer 4):</strong> End-to-End communication, flow & error control, segmentation. Protocols: <span style="background-color: rgba(14, 165, 233, 0.15); color: #0ea5e9; padding: 2px 6px; border-radius: 4px; font-weight: 600;">TCP (Segment), UDP</span>. Devices: Gateway, L4 Switch.</li>
+        <li><strong style="color: #14b8a6;">Network Layer (Layer 3):</strong> Logical addressing (IP address) & routing. PDU = <u>Packet</u>. Devices: <span style="background-color: rgba(245, 158, 11, 0.2); color: #d97706; font-weight: bold; padding: 2px 6px; border-radius: 4px;">Router, Layer 3 Switch</span>.</li>
+        <li><strong style="color: #10b981;">Data Link Layer (Layer 2):</strong> Physical addressing (MAC), framing, node-to-node hop error/flow control. PDU = <u>Frame</u>. Devices: <span style="background-color: rgba(245, 158, 11, 0.2); color: #d97706; font-weight: bold; padding: 2px 6px; border-radius: 4px;">Bridge, Switch, NIC</span>.</li>
+        <li><strong style="color: #f59e0b;">Physical Layer (Layer 1):</strong> Raw bit transmission over physical medium. PDU = <u>Bits</u>. Devices: <span style="background-color: rgba(245, 158, 11, 0.2); color: #d97706; font-weight: bold; padding: 2px 6px; border-radius: 4px;">Hub, Repeater, Cables</span>.</li>
       </ol>
-      <p style="background-color: #f0fdf4; border: 1px solid #86efac; color: #166534; padding: 8px 12px; border-radius: 6px;">
+      <p style="border-left: 4px solid #10b981; padding-left: 12px; margin-top: 10px; font-weight: 600;">
         ⭐ <strong>Golden Formula:</strong> Routers work at Layer 3, Switches/Bridges at Layer 2, Hubs/Repeaters at Layer 1!
       </p>
     `,
@@ -63,8 +64,8 @@ const SEED_TOPICS = [
         <li><strong style="color: #10b981;">Quadrant 3: Self-Assessment (Tests & Quizzes)</strong> - Interactive quizzes, MCQs, and assignments for continuous self-evaluation.</li>
         <li><strong style="color: #f59e0b;">Quadrant 4: Discussion Forum (Doubt Clearing)</strong> - Dedicated interactive online clearinghouse for discussing doubts with course mentors and peer students.</li>
       </ul>
-      <p style="background: #f8fafc; border-left: 4px solid #6366f1; padding: 8px 12px; color: #334155;">
-        🎯 <em>Note:</em> SWAYAM PRABHA has <strong>40 DTH channels</strong> (increased from 34/22) telecasting educational programs 24x7 using GSAT-15 satellite!
+      <p style="border-left: 4px solid #6366f1; padding-left: 12px; margin-top: 10px; font-weight: 600;">
+        🎯 <em>Note:</em> SWAYAM PRABHA has <strong>40 DTH channels</strong> (telecasting educational programs 24x7 using GSAT-15 satellite)!
       </p>
     `,
     createdAt: Date.now() - 3600000 * 24 * 1.5,
@@ -84,7 +85,7 @@ const SEED_TOPICS = [
         <li><strong style="color: #d97706;">No Preemption:</strong> Resources cannot be forcibly seized from a process; they can only be released voluntarily after the process finishes.</li>
         <li><strong style="color: #059669;">Circular Wait:</strong> A closed chain of processes exists {P0, P1, ..., Pn} such that P0 waits for P1, P1 waits for P2, and Pn waits for P0.</li>
       </ol>
-      <p style="background-color: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 8px 12px; border-radius: 6px;">
+      <p style="border-left: 4px solid #3b82f6; padding-left: 12px; margin-top: 10px; font-weight: 600;">
         💡 <strong>Deadlock Prevention Strategy:</strong> Invalidate ANY ONE of these 4 conditions! E.g., prevent Circular Wait by ordering all resource requests linearly using integer IDs (Havender's algorithm).
       </p>
     `,
@@ -99,43 +100,43 @@ const SEED_TOPICS = [
     trick: "👑 'U - C - C - R' (Type 0 to 3: Unrestricted, Context-Sensitive, Context-Free, Regular) → 'U Cute Cute Rani'!",
     explanation: `
       <p>Noam Chomsky classified formal languages into a strict 4-level hierarchy based on the generative power of their grammars:</p>
-      <table style="width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.95rem;">
+      <table>
         <thead>
-          <tr style="background-color: #1e293b; color: #f8fafc;">
-            <th style="padding: 8px; border: 1px solid #334155;">Type</th>
-            <th style="padding: 8px; border: 1px solid #334155;">Grammar & Language</th>
-            <th style="padding: 8px; border: 1px solid #334155;">Accepting Automaton</th>
-            <th style="padding: 8px; border: 1px solid #334155;">Production Form</th>
+          <tr>
+            <th>Type</th>
+            <th>Grammar &amp; Language</th>
+            <th>Accepting Automaton</th>
+            <th>Production Form</th>
           </tr>
         </thead>
         <tbody>
-          <tr style="background-color: rgba(239, 68, 68, 0.08);">
-            <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold;">Type 0</td>
-            <td style="padding: 8px; border: 1px solid #cbd5e1;">Unrestricted / Recursively Enumerable</td>
-            <td style="padding: 8px; border: 1px solid #cbd5e1;"><span style="color: #dc2626; font-weight: bold;">Turing Machine</span></td>
-            <td style="padding: 8px; border: 1px solid #cbd5e1;">α → β (no restriction, |α| ≥ 1)</td>
+          <tr>
+            <td><strong>Type 0</strong></td>
+            <td>Unrestricted / Recursively Enumerable</td>
+            <td><strong style="color: #ef4444;">Turing Machine</strong></td>
+            <td><code>α → β (no restriction, |α| ≥ 1)</code></td>
           </tr>
-          <tr style="background-color: rgba(245, 158, 11, 0.08);">
-            <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold;">Type 1</td>
-            <td style="padding: 8px; border: 1px solid #cbd5e1;">Context-Sensitive (CSL)</td>
-            <td style="padding: 8px; border: 1px solid #cbd5e1;"><span style="color: #d97706; font-weight: bold;">Linear Bounded Automaton (LBA)</span></td>
-            <td style="padding: 8px; border: 1px solid #cbd5e1;">α → β where |α| ≤ |β|</td>
+          <tr>
+            <td><strong>Type 1</strong></td>
+            <td>Context-Sensitive (CSL)</td>
+            <td><strong style="color: #f59e0b;">Linear Bounded Automaton (LBA)</strong></td>
+            <td><code>α → β where |α| ≤ |β|</code></td>
           </tr>
-          <tr style="background-color: rgba(59, 130, 246, 0.08);">
-            <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold;">Type 2</td>
-            <td style="padding: 8px; border: 1px solid #cbd5e1;">Context-Free (CFL)</td>
-            <td style="padding: 8px; border: 1px solid #cbd5e1;"><span style="color: #2563eb; font-weight: bold;">Pushdown Automaton (PDA)</span></td>
-            <td style="padding: 8px; border: 1px solid #cbd5e1;">A → α (Single Non-Terminal LHS)</td>
+          <tr>
+            <td><strong>Type 2</strong></td>
+            <td>Context-Free (CFL)</td>
+            <td><strong style="color: #3b82f6;">Pushdown Automaton (PDA)</strong></td>
+            <td><code>A → α (Single Non-Terminal LHS)</code></td>
           </tr>
-          <tr style="background-color: rgba(16, 185, 129, 0.08);">
-            <td style="padding: 8px; border: 1px solid #cbd5e1; font-weight: bold;">Type 3</td>
-            <td style="padding: 8px; border: 1px solid #cbd5e1;">Regular Language (RL)</td>
-            <td style="padding: 8px; border: 1px solid #cbd5e1;"><span style="color: #059669; font-weight: bold;">Finite State Automata (DFA/NFA)</span></td>
-            <td style="padding: 8px; border: 1px solid #cbd5e1;">A → aB or A → a (Right linear)</td>
+          <tr>
+            <td><strong>Type 3</strong></td>
+            <td>Regular Language (RL)</td>
+            <td><strong style="color: #10b981;">Finite State Automata (DFA/NFA)</strong></td>
+            <td><code>A → aB or A → a (Right linear)</code></td>
           </tr>
         </tbody>
       </table>
-      <p style="margin-top: 10px; font-weight: 600; color: #4338ca;">
+      <p style="margin-top: 10px; font-weight: 700; color: #6366f1;">
         ⚡ Inclusion Property: Type 3 ⊂ Type 2 ⊂ Type 1 ⊂ Type 0 (Every Regular language is also Context-Free, Context-Sensitive & RE!).
       </p>
     `,
@@ -168,7 +169,7 @@ const SEED_TOPICS = [
         <li><strong style="color: #059669;">Action Research (Kurt Lewin):</strong>
           <ul>
             <li>Main purpose: Immediate problem-solving by practitioner (teacher, clinician) in local environment.</li>
-            <li><span style="background-color: #fef3c7; color: #92400e; font-weight: bold; padding: 2px 8px; border-radius: 4px;">Cycle: Plan → Act → Observe → Reflect (PAOR)</span></li>
+            <li><span style="background-color: rgba(245, 158, 11, 0.2); color: #d97706; font-weight: bold; padding: 2px 8px; border-radius: 4px;">Cycle: Plan → Act → Observe → Reflect (PAOR)</span></li>
             <li><em>Example:</em> Teacher improving classroom engagement of slow learners.</li>
           </ul>
         </li>

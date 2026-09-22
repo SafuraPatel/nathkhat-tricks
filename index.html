@@ -9,104 +9,116 @@
   <!-- Modern Typography from Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
   
   <!-- Main Stylesheet -->
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-  <!-- Top Application Header -->
-  <header class="app-header">
-    <!-- Brand / Logo -->
-    <div class="brand-wrapper" id="brandBtn" title="NathKhat Home">
-      <div class="brand-icon-box">
-        <span>📚</span>
-      </div>
-      <div class="brand-text-col">
-        <h1 class="brand-name">
-          NathKhat
-          <span class="brand-badge">UGC NET</span>
-        </h1>
-        <span class="brand-tagline">Paper 1 &amp; P2 (Computer Science) Desi Tricks</span>
-      </div>
-    </div>
-
-    <!-- Paper 1 & Paper 2 Filter Switchers -->
-    <div class="paper-filter-group" role="group" aria-label="Paper Filter">
-      <button type="button" class="filter-btn active" data-paper="ALL" id="filterAll">
-        <span>All</span>
-        <span class="badge" id="countAllBadge">0</span>
-      </button>
-      <button type="button" class="filter-btn" data-paper="P1" id="filterP1" title="Paper 1: General Paper on Teaching &amp; Research Aptitude">
-        <span>P1</span>
-        <span class="badge" id="countP1Badge">0</span>
-      </button>
-      <button type="button" class="filter-btn" data-paper="P2" id="filterP2" title="Paper 2: Computer Science &amp; Applications">
-        <span>P2</span>
-        <span class="badge" id="countP2Badge">0</span>
-      </button>
-    </div>
-
-    <!-- Global Live Search Bar -->
-    <div class="search-container" id="searchContainer">
-      <div class="search-input-wrapper">
-        <span class="search-icon">🔍</span>
-        <input 
-          type="text" 
-          id="globalSearchInput" 
-          class="search-input" 
-          placeholder="Search topics, desi tricks, keywords..." 
-          autocomplete="off"
-          spellcheck="false"
-        >
-        <div class="search-shortcuts">
-          <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search">✕</button>
-          <span class="kbd-shortcut" title="Press / to focus search">/</span>
+  <!-- Top Sticky Bar (Header + Nav Bar unified) -->
+  <div class="top-sticky-wrapper">
+    <!-- Top Application Header -->
+    <header class="app-header">
+      <!-- Brand / Logo -->
+      <div class="brand-wrapper" id="brandBtn" title="NathKhat Home">
+        <div class="brand-icon-box">
+          <span>📚</span>
+        </div>
+        <div class="brand-text-col">
+          <h1 class="brand-name">
+            NathKhat
+            <span class="brand-badge">UGC NET</span>
+          </h1>
+          <span class="brand-tagline">Paper 1 &amp; P2 (Computer Science) Desi Tricks</span>
         </div>
       </div>
-    </div>
 
-    <!-- Header Actions (New Topic, Theme, Backup) -->
-    <div class="header-actions">
-      <button type="button" class="btn-primary" id="openAddTopicBtn" title="Add a new topic with desi trick &amp; explanation">
-        <span>➕</span>
-        <span>Add Topic</span>
-      </button>
+      <!-- Paper 1 & Paper 2 Filter Switchers -->
+      <div class="paper-filter-group" role="group" aria-label="Paper Filter">
+        <button type="button" class="filter-btn active" data-paper="ALL" id="filterAll">
+          <span>All</span>
+          <span class="badge" id="countAllBadge">0</span>
+        </button>
+        <button type="button" class="filter-btn" data-paper="P1" id="filterP1" title="Paper 1: General Paper on Teaching &amp; Research Aptitude">
+          <span>P1</span>
+          <span class="badge" id="countP1Badge">0</span>
+        </button>
+        <button type="button" class="filter-btn" data-paper="P2" id="filterP2" title="Paper 2: Computer Science &amp; Applications">
+          <span>P2</span>
+          <span class="badge" id="countP2Badge">0</span>
+        </button>
+      </div>
 
-      <button type="button" class="btn-icon" id="themeToggleBtn" title="Toggle Dark / Light Theme" aria-label="Toggle Theme">
-        <span id="themeIcon">🌙</span>
-      </button>
+      <!-- Global Live Search Bar -->
+      <div class="search-container" id="searchContainer">
+        <div class="search-input-wrapper">
+          <span class="search-icon">🔍</span>
+          <input 
+            type="text" 
+            id="globalSearchInput" 
+            class="search-input" 
+            placeholder="Search topics, desi tricks, keywords..." 
+            autocomplete="off"
+            spellcheck="false"
+          >
+          <div class="search-shortcuts">
+            <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search">✕</button>
+            <span class="kbd-shortcut" title="Press / to focus search">/</span>
+          </div>
+        </div>
+      </div>
 
-      <button type="button" class="btn-icon" id="backupDataBtn" title="Backup or Restore Data (JSON)" aria-label="Backup / Restore">
-        <span>💾</span>
-      </button>
-    </div>
-  </header>
+      <!-- Header Actions (New Topic, Theme, Backup) -->
+      <div class="header-actions">
+        <button type="button" class="btn-primary" id="openAddTopicBtn" title="Add a new topic with desi trick &amp; explanation">
+          <span>➕</span>
+          <span>Add Topic</span>
+        </button>
 
-  <!-- Secondary Navigation Bar (Sections Switcher) -->
-  <nav class="nav-sections-bar">
-    <div class="section-tabs" role="tablist">
-      <button type="button" class="nav-tab-btn active" data-view="topicsView" id="tabTopicsView" role="tab">
-        <span>📚</span>
-        <span>Topics &amp; Desi Tricks</span>
-        <span class="tab-badge" id="activeTopicsBadge">0</span>
-      </button>
-      <button type="button" class="nav-tab-btn" data-view="notepadView" id="tabNotepadView" role="tab">
-        <span>📝</span>
-        <span>General Notepad</span>
-      </button>
-      <button type="button" class="nav-tab-btn" data-view="binView" id="tabBinView" role="tab">
-        <span>🗑️</span>
-        <span>Recycle Bin</span>
-        <span class="tab-badge" id="binCountBadge">0</span>
-      </button>
-    </div>
+        <button type="button" class="btn-icon" id="themeToggleBtn" title="Toggle Dark / Light Theme" aria-label="Toggle Theme">
+          <span id="themeIcon">🌙</span>
+        </button>
 
-    <div class="stats-pill">
-      <span id="quickStatsText">Ready to revise</span>
-    </div>
-  </nav>
+        <button type="button" class="btn-icon" id="backupDataBtn" title="Backup or Restore Data (JSON)" aria-label="Backup / Restore">
+          <span>💾</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Secondary Navigation Bar (Sections Switcher) -->
+    <nav class="nav-sections-bar">
+      <div class="section-tabs" role="tablist">
+        <!-- Mobile Sidebar Toggle -->
+        <button type="button" class="sidebar-toggle-btn" id="mobileIndexToggleBtn" title="Open topics index">
+          <span>📑</span>
+          <span>Index</span>
+        </button>
+
+        <button type="button" class="nav-tab-btn active" data-view="topicsView" id="tabTopicsView" role="tab">
+          <span>📚</span>
+          <span>Topics &amp; Desi Tricks</span>
+          <span class="tab-badge" id="activeTopicsBadge">0</span>
+        </button>
+        <button type="button" class="nav-tab-btn" data-view="notepadView" id="tabNotepadView" role="tab">
+          <span>📝</span>
+          <span>General Notepad</span>
+        </button>
+        <button type="button" class="nav-tab-btn" data-view="binView" id="tabBinView" role="tab">
+          <span>🗑️</span>
+          <span>Recycle Bin</span>
+          <span class="tab-badge" id="binCountBadge">0</span>
+        </button>
+      </div>
+
+      <div class="stats-pill">
+        <span id="quickStatsText">Ready to revise</span>
+      </div>
+    </nav>
+  </div>
+
+  <!-- Mobile Sidebar Backdrop Overlay -->
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
   <!-- App Main Layout (Section 1: Index + Section 2/3/4 Content Views) -->
   <div class="app-container">
@@ -119,6 +131,7 @@
           <span>Topics Index</span>
           <span class="index-counter-badge" id="indexCountBadge">0</span>
         </div>
+        <button type="button" class="btn-card-action" id="closeMobileSidebarBtn" title="Close Index" style="font-size: 1.1rem;">✕</button>
       </div>
 
       <div class="index-filter-input-wrap">
@@ -286,7 +299,7 @@
 
           <!-- Distinct Box 1: Desi Trick Input -->
           <div class="form-group">
-            <label class="form-label" for="topicTrickInput" style="color: var(--desi-trick-badge); font-weight: 700;">
+            <label class="form-label" for="topicTrickInput" style="color: var(--desi-border); font-weight: 800;">
               ✨ Desi Trick / देशी जुगाड़ / Memory Hook
             </label>
             <textarea 

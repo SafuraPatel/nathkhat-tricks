@@ -62,6 +62,9 @@ const DOM = {
   indexCountBadge: document.getElementById('indexCountBadge'),
   indexFilterInput: document.getElementById('indexFilterInput'),
   indexList: document.getElementById('indexList'),
+  mobileIndexToggleBtn: document.getElementById('mobileIndexToggleBtn'),
+  closeMobileSidebarBtn: document.getElementById('closeMobileSidebarBtn'),
+  sidebarBackdrop: document.getElementById('sidebarBackdrop'),
 
   // Topics (Section 2)
   topicsContainer: document.getElementById('topicsContainer'),
@@ -418,7 +421,20 @@ function renderIndex() {
   });
 }
 
+function closeMobileIndex() {
+  if (DOM.indexSidebar) DOM.indexSidebar.classList.remove('mobile-open');
+  if (DOM.sidebarBackdrop) DOM.sidebarBackdrop.classList.remove('active');
+}
+
+function toggleMobileIndex() {
+  if (DOM.indexSidebar) DOM.indexSidebar.classList.toggle('mobile-open');
+  if (DOM.sidebarBackdrop) DOM.sidebarBackdrop.classList.toggle('active');
+}
+
 function jumpToTopic(topicId) {
+  // Ensure mobile sidebar closes smoothly
+  closeMobileIndex();
+
   // Ensure we are in topics view
   if (STATE.activeView !== 'topicsView') {
     switchView('topicsView');
@@ -1064,6 +1080,17 @@ function setupEventListeners() {
   DOM.closeBackupModalFooterBtn.addEventListener('click', closeBackupModal);
   DOM.exportJsonBtn.addEventListener('click', exportBackupJson);
   DOM.importJsonInput.addEventListener('change', importBackupJson);
+
+  // Mobile Sidebar Toggle
+  if (DOM.mobileIndexToggleBtn) {
+    DOM.mobileIndexToggleBtn.addEventListener('click', toggleMobileIndex);
+  }
+  if (DOM.closeMobileSidebarBtn) {
+    DOM.closeMobileSidebarBtn.addEventListener('click', closeMobileIndex);
+  }
+  if (DOM.sidebarBackdrop) {
+    DOM.sidebarBackdrop.addEventListener('click', closeMobileIndex);
+  }
 
   // Setup WYSIWYG
   setupRichTextEditor();
