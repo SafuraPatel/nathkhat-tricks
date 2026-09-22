@@ -735,18 +735,16 @@ body::after {
   font-size: 0.88rem;
   font-weight: 700;
   color: var(--text-main);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-word;
+  overflow-wrap: anywhere;
   line-height: 1.35;
 }
 
 .index-item-unit {
   font-size: 0.74rem;
   color: var(--text-dim);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  word-break: break-word;
+  overflow-wrap: anywhere;
   margin-top: 2px;
 }
 
@@ -1431,6 +1429,16 @@ mark.search-highlight {
   color: var(--text-muted) !important;
 }
 
+/* Responsive Table Container for Complete Display */
+.table-wrapper {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 0.85rem 0;
+  border-radius: var(--radius-md);
+}
+
 /* Interactive Table Control Bar (Word-like Table Controls) */
 .table-control-bar {
   display: flex;
@@ -1935,69 +1943,66 @@ html, body {
 }
 
 @media (max-width: 768px) {
-  /* Grid Layout for Header: Rock-solid, Zero Overflow */
+  /* Grid Layout for Header: Icons only for Brand & Tabs on Small Screens */
   .app-header {
     display: grid;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: auto 1fr auto;
     grid-template-areas:
-      "brand actions"
-      "filters filters"
-      "search search";
-    gap: 0.6rem 0.5rem;
-    padding: 0.65rem 0.85rem;
+      "brand filters actions"
+      "search search search";
+    gap: 0.45rem 0.65rem;
+    align-items: center;
+    padding: 0.5rem 0.65rem;
     width: 100%;
   }
 
   .brand-wrapper {
     grid-area: brand;
     min-width: 0;
-    gap: 0.65rem;
+    gap: 0;
+    cursor: pointer;
+  }
+
+  /* Show ONLY icons in Header on small screen */
+  .brand-text-col {
+    display: none !important;
   }
 
   .brand-icon-box {
-    width: 40px;
-    height: 40px;
-    font-size: 1.35rem;
-  }
-
-  .brand-name {
+    width: 38px;
+    height: 38px;
     font-size: 1.25rem;
   }
 
-  .brand-tagline {
-    display: none;
+  .paper-filter-group {
+    grid-area: filters;
+    width: auto;
+    display: flex;
+    justify-content: center;
+    gap: 3px;
+    padding: 2px;
+  }
+
+  .filter-btn {
+    padding: 5px 8px;
+    font-size: 0.78rem;
+    gap: 4px;
+  }
+
+  .filter-btn .badge {
+    padding: 1px 5px;
+    font-size: 0.68rem;
   }
 
   .header-actions {
     grid-area: actions;
-    gap: 0.4rem;
-  }
-
-  .btn-primary {
-    height: 38px;
-    padding: 0 0.85rem;
-    font-size: 0.82rem;
+    gap: 0.35rem;
   }
 
   .btn-icon {
     width: 38px;
     height: 38px;
     font-size: 1rem;
-  }
-
-  .paper-filter-group {
-    grid-area: filters;
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    padding: 3px;
-  }
-
-  .filter-btn {
-    flex: 1;
-    justify-content: center;
-    padding: 6px 4px;
-    font-size: 0.82rem;
   }
 
   .search-container {
@@ -2008,8 +2013,12 @@ html, body {
   }
 
   .search-input {
-    height: 38px;
-    font-size: 0.86rem;
+    height: 36px;
+    font-size: 0.84rem;
+  }
+
+  .kbd-shortcut {
+    display: none !important; /* Hide physical shortcut on mobile */
   }
 
   /* Unstick large header on mobile so 95%+ of screen is visible for content */
@@ -2020,7 +2029,11 @@ html, body {
     border-bottom: none;
   }
 
-  /* Sleek sticky Nav Bar stays pinned at top on mobile */
+  /* Sleek sticky Nav Bar: Show ONLY icons and badges on small screens */
+  .tab-label {
+    display: none !important;
+  }
+
   .nav-sections-bar {
     position: sticky;
     top: 0;
@@ -2030,7 +2043,7 @@ html, body {
     -webkit-backdrop-filter: blur(18px);
     border-bottom: 1px solid var(--border-subtle);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.28);
-    padding: 0.35rem 0.65rem;
+    padding: 0.35rem 0.5rem;
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
@@ -2040,37 +2053,121 @@ html, body {
   .section-tabs {
     display: flex;
     width: 100%;
-    gap: 0.35rem;
+    gap: 0.4rem;
+    justify-content: space-between;
   }
 
   .nav-tab-btn, .sidebar-toggle-btn {
     flex: 1;
+    display: inline-flex;
+    align-items: center;
     justify-content: center;
-    padding: 6px 4px;
-    font-size: 0.78rem;
+    gap: 4px;
+    padding: 7px 4px;
+    font-size: 1.15rem;
     white-space: nowrap;
     border-radius: var(--radius-sm);
   }
 
-  /* Stage and Cards on Mobile */
+  .tab-icon {
+    font-size: 1.15rem;
+    line-height: 1;
+  }
+
+  .tab-badge {
+    font-size: 0.72rem;
+    padding: 1px 6px;
+  }
+
+  /* Stage and Cards on Mobile: Ensure Complete Data Display */
   .main-stage {
-    padding: 0.85rem 0.65rem 6.5rem 0.65rem;
+    padding: 0.75rem 0.5rem 5rem 0.5rem;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     min-height: calc(100vh - 120px);
   }
 
+  .topics-toolbar {
+    margin-bottom: 0.85rem;
+  }
+
   .topic-card, .note-card {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     scroll-margin-top: 60px;
   }
 
-  .topics-toolbar {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.65rem;
-    margin-bottom: 1rem;
+  .topic-card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.45rem;
+    padding: 0.75rem 0.75rem 0.6rem 0.75rem;
   }
 
-  .topics-title-area h2 {
-    font-size: 1.35rem;
+  .topic-title-group {
+    flex: 1;
+    min-width: 160px;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+  }
+
+  .topic-card-title {
+    font-size: 1.08rem;
+    line-height: 1.4;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .topic-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: auto;
+  }
+
+  .desi-trick-box {
+    margin: 0.5rem 0.65rem 0.45rem 0.65rem;
+    padding: 0.75rem 0.85rem;
+  }
+
+  .desi-trick-content {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .explanation-box {
+    padding: 0.6rem 0.75rem 0.95rem 0.75rem;
+  }
+
+  .explanation-body {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  .explanation-body img, .note-card-content img {
+    max-width: 100% !important;
+    height: auto !important;
+    border-radius: 8px;
+    display: block;
+    margin: 0.5rem 0;
+  }
+
+  .table-wrapper {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    display: block;
+    margin: 0.65rem 0;
   }
 
   .topics-controls {
@@ -2095,48 +2192,6 @@ html, body {
 
   .topics-grid {
     gap: 1.15rem;
-  }
-
-  .topic-card {
-    border-radius: var(--radius-md);
-  }
-
-  .topic-card-header {
-    padding: 1rem 1rem 0.75rem 1rem;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.65rem;
-  }
-
-  .topic-actions {
-    align-self: flex-end;
-  }
-
-  .topic-card-title {
-    font-size: 1.18rem;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-  }
-
-  .desi-trick-box {
-    margin: 0.75rem 0.85rem 0.65rem 0.85rem;
-    padding: 0.95rem 1rem;
-  }
-
-  .desi-trick-content {
-    font-size: 1rem;
-    word-break: break-word;
-    overflow-wrap: anywhere;
-  }
-
-  .explanation-box {
-    padding: 0.65rem 0.85rem 1.15rem 0.85rem;
-  }
-
-  .explanation-body {
-    font-size: 0.92rem;
-    word-break: break-word;
-    overflow-wrap: anywhere;
   }
 
   /* Modals on Mobile */
@@ -2225,12 +2280,16 @@ html, body {
    ========================================================================== */
 @media (max-width: 480px) {
   .app-header {
-    padding: 0.55rem 0.65rem;
-    gap: 0.45rem;
+    padding: 0.45rem 0.5rem;
+    gap: 0.4rem 0.5rem;
   }
 
   .brand-wrapper {
-    gap: 0.5rem;
+    gap: 0;
+  }
+
+  .brand-text-col {
+    display: none !important;
   }
 
   .brand-icon-box {
@@ -2239,23 +2298,7 @@ html, body {
     font-size: 1.2rem;
   }
 
-  .brand-name {
-    font-size: 1.15rem;
-  }
-
-  .brand-badge {
-    font-size: 0.58rem;
-    padding: 1px 5px;
-  }
-
   .header-actions {
-    gap: 0.3rem;
-  }
-
-  .btn-primary {
-    height: 36px;
-    padding: 0 0.65rem;
-    font-size: 0.78rem;
     gap: 0.25rem;
   }
 
@@ -2265,39 +2308,66 @@ html, body {
     font-size: 0.95rem;
   }
 
+  .paper-filter-group {
+    gap: 2px;
+    padding: 2px;
+  }
+
   .filter-btn {
-    padding: 5px 2px;
-    font-size: 0.76rem;
+    padding: 4px 6px;
+    font-size: 0.74rem;
+    gap: 3px;
   }
 
   .filter-btn .badge {
-    padding: 1px 5px;
-    font-size: 0.68rem;
+    padding: 1px 4px;
+    font-size: 0.65rem;
   }
 
   .nav-sections-bar {
-    padding: 0.25rem 0.45rem;
+    padding: 0.25rem 0.35rem;
   }
 
   .section-tabs {
-    gap: 2px;
+    gap: 3px;
+  }
+
+  .tab-label {
+    display: none !important;
   }
 
   .nav-tab-btn, .sidebar-toggle-btn {
-    padding: 6px 2px;
-    font-size: 0.72rem;
+    padding: 6px 3px;
+    font-size: 1.12rem;
+    gap: 3px;
+  }
+
+  .tab-icon {
+    font-size: 1.15rem;
+  }
+
+  .tab-badge {
+    font-size: 0.68rem;
+    padding: 1px 5px;
   }
 
   .main-stage {
-    padding: 0.65rem 0.45rem 3rem 0.45rem;
+    padding: 0.65rem 0.4rem 4rem 0.4rem;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .topic-card-header {
-    padding: 0.85rem 0.75rem 0.65rem 0.75rem;
+    padding: 0.65rem 0.65rem 0.5rem 0.65rem;
+    gap: 0.35rem;
   }
 
   .topic-card-title {
-    font-size: 1.1rem;
+    font-size: 1.02rem;
+    line-height: 1.35;
+    word-break: break-word;
+    overflow-wrap: anywhere;
   }
 
   .desi-trick-box {
