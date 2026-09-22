@@ -1,19 +1,24 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="NathKhat - Dynamic study, revision and Desi Tricks platform for UGC NET Paper 1 and Paper 2 Computer Science with index jumping, rich formatting, notepad and recycle bin.">
+  <meta name="description"
+    content="NathKhat - Dynamic study, revision and Desi Tricks platform for UGC NET Paper 1 and Paper 2 Computer Science with index jumping, rich formatting, notepad and recycle bin.">
   <title>NathKhat | UGC NET Paper 1 & P2 Computer Science Desi Tricks & Revision</title>
-  
+
   <!-- Modern Typography from Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
-  
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap"
+    rel="stylesheet">
+
   <!-- Main Stylesheet -->
   <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
 
   <!-- Top Sticky Bar (Header + Nav Bar unified) -->
@@ -40,11 +45,13 @@
           <span>All</span>
           <span class="badge" id="countAllBadge">0</span>
         </button>
-        <button type="button" class="filter-btn" data-paper="P1" id="filterP1" title="Paper 1: General Paper on Teaching &amp; Research Aptitude">
+        <button type="button" class="filter-btn" data-paper="P1" id="filterP1"
+          title="Paper 1: General Paper on Teaching &amp; Research Aptitude">
           <span>P1</span>
           <span class="badge" id="countP1Badge">0</span>
         </button>
-        <button type="button" class="filter-btn" data-paper="P2" id="filterP2" title="Paper 2: Computer Science &amp; Applications">
+        <button type="button" class="filter-btn" data-paper="P2" id="filterP2"
+          title="Paper 2: Computer Science &amp; Applications">
           <span>P2</span>
           <span class="badge" id="countP2Badge">0</span>
         </button>
@@ -54,14 +61,8 @@
       <div class="search-container" id="searchContainer">
         <div class="search-input-wrapper">
           <span class="search-icon">🔍</span>
-          <input 
-            type="text" 
-            id="globalSearchInput" 
-            class="search-input" 
-            placeholder="Search topics, desi tricks, keywords..." 
-            autocomplete="off"
-            spellcheck="false"
-          >
+          <input type="text" id="globalSearchInput" class="search-input"
+            placeholder="Search topics, desi tricks, keywords..." autocomplete="off" spellcheck="false">
           <div class="search-shortcuts">
             <button type="button" id="clearSearchBtn" class="clear-search-btn" title="Clear search">✕</button>
             <span class="kbd-shortcut" title="Press / to focus search">/</span>
@@ -71,16 +72,19 @@
 
       <!-- Header Actions (New Topic, Theme, Backup) -->
       <div class="header-actions">
-        <button type="button" class="btn-primary" id="openAddTopicBtn" title="Add a new topic with desi trick &amp; explanation">
+        <button type="button" class="btn-primary" id="openAddTopicBtn"
+          title="Add a new topic with desi trick &amp; explanation">
           <span>➕</span>
           <span>Add Topic</span>
         </button>
 
-        <button type="button" class="btn-icon" id="themeToggleBtn" title="Toggle Dark / Light Theme" aria-label="Toggle Theme">
+        <button type="button" class="btn-icon" id="themeToggleBtn" title="Toggle Dark / Light Theme"
+          aria-label="Toggle Theme">
           <span id="themeIcon">🌙</span>
         </button>
 
-        <button type="button" class="btn-icon" id="backupDataBtn" title="Backup or Restore Data (JSON)" aria-label="Backup / Restore">
+        <button type="button" class="btn-icon" id="backupDataBtn" title="Backup or Restore Data (JSON)"
+          aria-label="Backup / Restore">
           <span>💾</span>
         </button>
       </div>
@@ -97,22 +101,18 @@
 
         <button type="button" class="nav-tab-btn active" data-view="topicsView" id="tabTopicsView" role="tab">
           <span>📚</span>
-          <span>Topics &amp; Desi Tricks</span>
+          <span>Topics &amp; Tricks</span>
           <span class="tab-badge" id="activeTopicsBadge">0</span>
         </button>
         <button type="button" class="nav-tab-btn" data-view="notepadView" id="tabNotepadView" role="tab">
           <span>📝</span>
-          <span>General Notepad</span>
+          <span>Notepad</span>
         </button>
         <button type="button" class="nav-tab-btn" data-view="binView" id="tabBinView" role="tab">
           <span>🗑️</span>
-          <span>Recycle Bin</span>
+          <span>Bin</span>
           <span class="tab-badge" id="binCountBadge">0</span>
         </button>
-      </div>
-
-      <div class="stats-pill">
-        <span id="quickStatsText">Ready to revise</span>
       </div>
     </nav>
   </div>
@@ -122,7 +122,7 @@
 
   <!-- App Main Layout (Section 1: Index + Section 2/3/4 Content Views) -->
   <div class="app-container">
-    
+
     <!-- SECTION 1: Index Sidebar (Quick Jump Navigator) -->
     <aside class="index-sidebar" id="indexSidebar">
       <div class="index-header">
@@ -131,18 +131,14 @@
           <span>Topics Index</span>
           <span class="index-counter-badge" id="indexCountBadge">0</span>
         </div>
-        <button type="button" class="btn-card-action" id="closeMobileSidebarBtn" title="Close Index" style="font-size: 1.1rem;">✕</button>
+        <button type="button" class="btn-card-action" id="closeMobileSidebarBtn" title="Close Index"
+          style="font-size: 1.1rem;">✕</button>
       </div>
 
       <div class="index-filter-input-wrap">
         <div class="index-filter-wrap-rel">
           <span class="index-filter-icon">⚡</span>
-          <input 
-            type="text" 
-            id="indexFilterInput" 
-            class="index-filter-input" 
-            placeholder="Quick filter index..."
-          >
+          <input type="text" id="indexFilterInput" class="index-filter-input" placeholder="Quick filter index...">
         </div>
       </div>
 
@@ -154,7 +150,7 @@
 
     <!-- Main Stage Content Area -->
     <main class="main-stage">
-      
+
       <!-- SECTION 2: Topics & Desi Tricks View -->
       <section class="section-view active" id="topicsView" role="tabpanel">
         <div class="topics-toolbar">
@@ -180,7 +176,8 @@
         <div class="empty-state" id="topicsEmptyState" style="display: none;">
           <div class="empty-icon">💡</div>
           <h3 class="empty-title">No Topics Found</h3>
-          <p class="empty-desc">No topics match your current filter or search criteria. Add a new topic or clear search filters to view your notes.</p>
+          <p class="empty-desc">No topics match your current filter or search criteria. Add a new topic or clear search
+            filters to view your notes.</p>
           <button type="button" class="btn-primary" id="emptyStateAddBtn">➕ Add First Topic</button>
         </div>
       </section>
@@ -205,12 +202,9 @@
             </div>
           </div>
 
-          <textarea 
-            id="notepadEditor" 
-            class="notepad-editor" 
+          <textarea id="notepadEditor" class="notepad-editor"
             placeholder="Write your general revision points, exam strategies, daily formulas, or quick thoughts here... (Automatically saved)"
-            spellcheck="false"
-          ></textarea>
+            spellcheck="false"></textarea>
 
           <div class="notepad-footer">
             <span id="notepadStats">0 words • 0 characters</span>
@@ -268,13 +262,8 @@
             <label class="form-label" for="topicTitleInput">
               Topic Name <strong style="color: var(--primary);">* (Visible on Index section)</strong>
             </label>
-            <input 
-              type="text" 
-              id="topicTitleInput" 
-              class="form-input" 
-              placeholder="e.g. OSI Model 7 Layers or Scales of Measurement (NOIR)" 
-              required
-            >
+            <input type="text" id="topicTitleInput" class="form-input"
+              placeholder="e.g. OSI Model 7 Layers or Scales of Measurement (NOIR)" required>
           </div>
 
           <!-- Paper & Unit Classification -->
@@ -288,12 +277,8 @@
             </div>
             <div class="form-group">
               <label class="form-label" for="topicUnitInput">Unit / Subject Category</label>
-              <input 
-                type="text" 
-                id="topicUnitInput" 
-                class="form-input" 
-                placeholder="e.g. Unit 9: Computer Networks, Unit 2: Research Aptitude"
-              >
+              <input type="text" id="topicUnitInput" class="form-input"
+                placeholder="e.g. Unit 9: Computer Networks, Unit 2: Research Aptitude">
             </div>
           </div>
 
@@ -302,13 +287,11 @@
             <label class="form-label" for="topicTrickInput" style="color: var(--desi-border); font-weight: 800;">
               ✨ Desi Trick / देशी जुगाड़ / Memory Hook
             </label>
-            <textarea 
-              id="topicTrickInput" 
-              class="form-textarea" 
+            <textarea id="topicTrickInput" class="form-textarea"
               placeholder="e.g. 'Pyari Didi Ne Transport Se Pizza Allot kiya' or 'NOIR film - Nominal, Ordinal, Interval, Ratio'"
-              required
-            ></textarea>
-            <p class="editor-hint">This punchy trick will be prominently highlighted in the golden Desi Trick box with a one-click copy button!</p>
+              required></textarea>
+            <p class="editor-hint">This punchy trick will be prominently highlighted in the golden Desi Trick box with a
+              one-click copy button!</p>
           </div>
 
           <!-- Distinct Box 2: Explanation Rich-Text Editor -->
@@ -316,15 +299,13 @@
             <label class="form-label">
               📖 Explanation (Word-like Rich Text: Font colors, Bold, Underline, Bullets, Images)
             </label>
-            
+
             <div class="editor-container">
-              <!-- Rich-Text Toolbar -->
+              <!-- Rich-Text Toolbar: B, U, H2, H3, P, A, HL, • List, 1. List, 🖼️, 📊 Table -->
               <div class="editor-toolbar" id="editorToolbar">
                 <button type="button" class="editor-btn" data-command="bold" title="Bold (Ctrl+B)"><strong>B</strong></button>
-                <button type="button" class="editor-btn" data-command="italic" title="Italic (Ctrl+I)"><em>I</em></button>
                 <button type="button" class="editor-btn" data-command="underline" title="Underline (Ctrl+U)"><u>U</u></button>
-                <button type="button" class="editor-btn" data-command="strikeThrough" title="Strikethrough"><s>S</s></button>
-                
+
                 <span class="editor-separator"></span>
 
                 <button type="button" class="editor-btn" data-command="formatBlock" data-val="h2" title="Heading 2">H2</button>
@@ -333,15 +314,15 @@
 
                 <span class="editor-separator"></span>
 
-                <!-- Text Color Picker -->
-                <label title="Font Color" style="display:flex; align-items:center; cursor:pointer;" class="editor-btn">
-                  <span style="font-weight:bold; color:#ef4444; font-size: 0.95rem;">A</span>
+                <!-- Text Color Picker (A) -->
+                <label title="Font Color (A)" style="display:flex; align-items:center; cursor:pointer;" class="editor-btn">
+                  <span style="font-weight:900; color:#ef4444; font-size: 1rem;">A</span>
                   <input type="color" id="foreColorPicker" class="color-picker-input" value="#6366f1" style="display:none;">
                 </label>
 
-                <!-- Text Background / Highlight Color Picker -->
-                <label title="Highlight Color" style="display:flex; align-items:center; cursor:pointer;" class="editor-btn">
-                  <span style="background:#fef08a; color:#854d0e; padding:1px 4px; border-radius:2px; font-weight:bold; font-size:0.8rem;">HL</span>
+                <!-- Text Background / Highlight Color Picker (HL) -->
+                <label title="Highlight Color (HL)" style="display:flex; align-items:center; cursor:pointer;" class="editor-btn">
+                  <span style="background:#fef08a; color:#854d0e; padding:1px 5px; border-radius:3px; font-weight:800; font-size:0.8rem;">HL</span>
                   <input type="color" id="hiliteColorPicker" class="color-picker-input" value="#fef08a" style="display:none;">
                 </label>
 
@@ -352,24 +333,23 @@
 
                 <span class="editor-separator"></span>
 
-                <!-- Image Upload Button -->
+                <!-- Image Upload Button (🖼️) -->
                 <label class="editor-btn" title="Add Image (or paste image directly from clipboard Ctrl+V)" style="cursor: pointer;">
                   <span>🖼️</span>
                   <input type="file" id="imageFileInput" accept="image/*" style="display: none;">
                 </label>
 
-                <button type="button" class="editor-btn" data-command="removeFormat" title="Clear Formatting">🧹</button>
+                <!-- Table Creation Button (📊 Table) -->
+                <button type="button" class="editor-btn" id="insertTableBtn" title="Create / Insert Table with attractive header and smooth colors">📊 Table</button>
               </div>
 
               <!-- Editable Area (Allows pasting rich formatted text & screenshots directly!) -->
-              <div 
-                id="topicExplanationEditor" 
-                class="editor-content-area" 
-                contenteditable="true"
-                data-placeholder="Paste explanation as-is from MS Word, websites, or PDFs with font colors, tables, and images..."
-              ></div>
+              <div id="topicExplanationEditor" class="editor-content-area" contenteditable="true"
+                data-placeholder="Paste explanation as-is from MS Word, websites, or PDFs with font colors, tables, and images...">
+              </div>
             </div>
-            <p class="editor-hint">💡 <strong>Pro-Tip:</strong> You can directly paste formatted text or copy &amp; paste screenshots (<kbd>Ctrl+V</kbd>) into this box!</p>
+            <p class="editor-hint">💡 <strong>Pro-Tip:</strong> You can directly paste formatted text or copy &amp;
+              paste screenshots (<kbd>Ctrl+V</kbd>) into this box!</p>
           </div>
         </form>
       </div>
@@ -392,19 +372,25 @@
       </div>
       <div class="modal-body">
         <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.25rem;">
-          Export your NathKhat study notes, desi tricks, and notepad content as a portable JSON file, or restore a previous backup.
+          Export your NathKhat study notes, desi tricks, and notepad content as a portable JSON file, or restore a
+          previous backup.
         </p>
 
         <div style="display: flex; flex-direction: column; gap: 1rem;">
-          <div style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-card);">
+          <div
+            style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-card);">
             <h4 style="font-size: 0.95rem; margin-bottom: 0.35rem; color: var(--text-main);">📥 Export Data</h4>
-            <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.75rem;">Download a JSON backup of all your active topics, notepad, and recycle bin.</p>
+            <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.75rem;">Download a JSON backup of all
+              your active topics, notepad, and recycle bin.</p>
             <button type="button" class="btn-primary" id="exportJsonBtn">Download Backup (JSON)</button>
           </div>
 
-          <div style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-card);">
-            <h4 style="font-size: 0.95rem; margin-bottom: 0.35rem; color: var(--text-main);">📤 Restore / Import Data</h4>
-            <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.75rem;">Select a previously downloaded NathKhat JSON file to restore.</p>
+          <div
+            style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-card);">
+            <h4 style="font-size: 0.95rem; margin-bottom: 0.35rem; color: var(--text-main);">📤 Restore / Import Data
+            </h4>
+            <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.75rem;">Select a previously downloaded
+              NathKhat JSON file to restore.</p>
             <input type="file" id="importJsonInput" accept=".json" style="font-size: 0.85rem;">
           </div>
         </div>
@@ -422,4 +408,5 @@
   <script src="js/seed-data.js"></script>
   <script src="js/app.js"></script>
 </body>
+
 </html>

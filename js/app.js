@@ -292,9 +292,10 @@ function updateBadges() {
   DOM.countP2Badge.textContent = p2Count;
   DOM.activeTopicsBadge.textContent = total;
   DOM.binCountBadge.textContent = binCount;
-  DOM.indexCountBadge.textContent = total;
-
-  DOM.quickStatsText.textContent = `${total} Topics Ready • P1: ${p1Count} | P2: ${p2Count}`;
+  if (DOM.indexCountBadge) DOM.indexCountBadge.textContent = total;
+  if (DOM.quickStatsText) {
+    DOM.quickStatsText.textContent = `${total} Topics Ready • P1: ${p1Count} | P2: ${p2Count}`;
+  }
 }
 
 /* ==========================================================================
@@ -760,6 +761,40 @@ function setupRichTextEditor() {
     }
     // If not image, default rich-text paste behavior preserves HTML formatting and colors!
   });
+
+  // Table Creation Button (📊 Table)
+  const insertTableBtn = document.getElementById('insertTableBtn');
+  if (insertTableBtn) {
+    insertTableBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const rowsInput = prompt('Enter number of rows (including header):', '3');
+      if (rowsInput === null) return;
+      const colsInput = prompt('Enter number of columns:', '3');
+      if (colsInput === null) return;
+
+      const rows = Math.min(Math.max(parseInt(rowsInput, 10) || 3, 2), 20);
+      const cols = Math.min(Math.max(parseInt(colsInput, 10) || 3, 1), 10);
+
+      let tableHtml = '<table class="custom-rich-table"><thead><tr>';
+      for (let c = 1; c <= cols; c++) {
+        tableHtml += `<th>Header ${c}</th>`;
+      }
+      tableHtml += '</tr></thead><tbody>';
+
+      for (let r = 1; r < rows; r++) {
+        tableHtml += '<tr>';
+        for (let c = 1; c <= cols; c++) {
+          tableHtml += `<td>Cell ${r},${c}</td>`;
+        }
+        tableHtml += '</tr>';
+      }
+      tableHtml += '</tbody></table><p><br></p>';
+
+      DOM.topicExplanationEditor.focus();
+      document.execCommand('insertHTML', false, tableHtml);
+      showToast(`Inserted ${rows}x${cols} table! Click any cell to type.`, 'success');
+    });
+  }
 }
 
 /* ==========================================================================
