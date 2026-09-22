@@ -517,9 +517,6 @@ function renderTopics() {
           <button type="button" class="btn-card-action" title="Edit Topic" data-action="edit" data-id="${topic.id}">
             ✏️
           </button>
-          <button type="button" class="btn-card-action" title="Duplicate Topic" data-action="duplicate" data-id="${topic.id}">
-            📑
-          </button>
           <button type="button" class="btn-card-action danger" title="Move to Recycle Bin" data-action="bin" data-id="${topic.id}">
             🗑️
           </button>
@@ -552,7 +549,6 @@ function renderTopics() {
 
     // Bind card actions
     card.querySelector('[data-action="edit"]').addEventListener('click', () => openEditTopicModal(topic.id));
-    card.querySelector('[data-action="duplicate"]').addEventListener('click', () => duplicateTopic(topic.id));
     card.querySelector('[data-action="bin"]').addEventListener('click', () => moveToBin(topic.id));
     card.querySelector('[data-action="copy-trick"]').addEventListener('click', (e) => {
       const trickText = decodeURIComponent(e.currentTarget.getAttribute('data-trick'));
@@ -1103,7 +1099,9 @@ function setupEventListeners() {
 
   // Notepad Controls
   DOM.notepadEditor.addEventListener('input', handleNotepadInput);
-  DOM.downloadNotepadBtn.addEventListener('click', downloadNotepad);
+  if (DOM.downloadNotepadBtn) {
+    DOM.downloadNotepadBtn.addEventListener('click', downloadNotepad);
+  }
   DOM.clearNotepadBtn.addEventListener('click', clearNotepad);
 
   // Bin Controls
