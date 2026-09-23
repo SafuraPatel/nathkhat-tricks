@@ -1017,7 +1017,7 @@ function setupSingleEditor(config) {
       if (table) appendTableCol(table);
     } else if (tableDel) {
       e.preventDefault();
-      if (confirm('Delete this table?')) {
+      if (confirm('Are you sure you want to delete this table?')) {
         const wrapper = tableDel.closest('.table-wrapper');
         if (wrapper) wrapper.remove();
         else {
@@ -1332,18 +1332,20 @@ function deleteNote(noteId) {
   const note = STATE.notes.find(n => n.id === noteId);
   if (!note) return;
 
-  if (confirm(`Delete note "${note.title}"?`)) {
-    STATE.notes = STATE.notes.filter(n => n.id !== noteId);
-    saveNotes();
-    updateBadges();
-    renderNotes();
-
-    if (typeof SyncEngine !== 'undefined' && SyncEngine.deleteNote) {
-      SyncEngine.deleteNote(noteId);
-    }
-
-    showToast(`Deleted note: "${note.title}"`, 'info');
+  if (!confirm(`Are you sure you want to delete note "${note.title}"?`)) {
+    return;
   }
+
+  STATE.notes = STATE.notes.filter(n => n.id !== noteId);
+  saveNotes();
+  updateBadges();
+  renderNotes();
+
+  if (typeof SyncEngine !== 'undefined' && SyncEngine.deleteNote) {
+    SyncEngine.deleteNote(noteId);
+  }
+
+  showToast(`Deleted note: "${note.title}"`, 'info');
 }
 
 function copyNote(noteId) {
@@ -1383,6 +1385,11 @@ function fallbackCopyText(text) {
 function moveToBin(topicId) {
   const index = STATE.topics.findIndex(t => t.id === topicId);
   if (index === -1) return;
+
+  const topicTitle = STATE.topics[index].title || 'this topic';
+  if (!confirm(`Are you sure you want to delete "${topicTitle}"?`)) {
+    return;
+  }
 
   const [topic] = STATE.topics.splice(index, 1);
   topic.deletedAt = Date.now();
@@ -1428,16 +1435,21 @@ function restoreFromBin(topicId) {
 }
 
 function deletePermanently(topicId) {
-  if (confirm('Permanently delete this topic? It cannot be recovered.')) {
-    STATE.bin = STATE.bin.filter(t => t.id !== topicId);
-    saveBin();
-    updateBadges();
-    renderBin();
-    if (typeof SyncEngine !== 'undefined') {
-      SyncEngine.deleteTopic(topicId);
-    }
-    showToast('Topic permanently deleted', 'error');
+  const item = STATE.bin.find(t => t.id === topicId);
+  const title = item ? `"${item.title}"` : 'this topic';
+
+  if (!confirm(`Are you sure you want to permanently delete ${title}? It cannot be recovered.`)) {
+    return;
   }
+
+  STATE.bin = STATE.bin.filter(t => t.id !== topicId);
+  saveBin();
+  updateBadges();
+  renderBin();
+  if (typeof SyncEngine !== 'undefined') {
+    SyncEngine.deleteTopic(topicId);
+  }
+  showToast('Topic permanently deleted', 'error');
 }
 
 function emptyBin() {
@@ -1446,13 +1458,15 @@ function emptyBin() {
     return;
   }
 
-  if (confirm(`Permanently delete all ${STATE.bin.length} items in the Recycle Bin? This action is irreversible.`)) {
-    STATE.bin = [];
-    saveBin();
-    updateBadges();
-    renderBin();
-    showToast('Recycle Bin emptied completely', 'error');
+  if (!confirm(`Are you sure you want to permanently delete all ${STATE.bin.length} items in the Recycle Bin? This action is irreversible.`)) {
+    return;
   }
+
+  STATE.bin = [];
+  saveBin();
+  updateBadges();
+  renderBin();
+  showToast('Recycle Bin emptied completely', 'error');
 }
 
 function renderBin() {
