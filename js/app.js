@@ -1393,6 +1393,10 @@ function moveToBin(topicId) {
   renderTopics();
   renderBin();
 
+  if (typeof SyncEngine !== 'undefined') {
+    SyncEngine.deleteTopic(topicId);
+  }
+
   showToast(`Moved "${topic.title}" to Recycle Bin`, 'info');
 }
 
@@ -1413,6 +1417,10 @@ function restoreFromBin(topicId) {
   renderIndex();
   renderBin();
 
+  if (typeof SyncEngine !== 'undefined') {
+    SyncEngine.pushTopic(topic);
+  }
+
   showToast(`Restored "${topic.title}" back to top of Index!`, 'success');
 }
 
@@ -1422,6 +1430,9 @@ function deletePermanently(topicId) {
     saveBin();
     updateBadges();
     renderBin();
+    if (typeof SyncEngine !== 'undefined') {
+      SyncEngine.deleteTopic(topicId);
+    }
     showToast('Topic permanently deleted', 'error');
   }
 }
