@@ -67,13 +67,8 @@
         </div>
       </div>
 
-      <!-- Header Actions (Sync Pill, Theme) -->
+      <!-- Header Actions (Theme Toggle) -->
       <div class="header-actions">
-        <button type="button" class="live-sync-pill connecting" id="liveSyncPill" title="Live Device Sync: Click for status">
-          <span class="sync-dot"></span>
-          <span class="sync-text" id="liveSyncText">Live Sync</span>
-        </button>
-
         <button type="button" class="btn-icon" id="themeToggleBtn" title="Toggle Dark / Light Theme"
           aria-label="Toggle Theme">
           <span id="themeIcon">🌙</span>
@@ -141,11 +136,11 @@
         <!-- Rendered dynamically via JavaScript -->
       </div>
 
-      <!-- Index Footer Actions (Cloud Sync & Backup) -->
+      <!-- Index Footer Actions (Backup & Portability) -->
       <div class="index-footer">
-        <button type="button" class="btn-sync-setting" id="backupDataBtn" title="Cloud Sync &amp; Backup">
-          <span>🌐</span>
-          <span>Cloud Sync &amp; Backup</span>
+        <button type="button" class="btn-sync-setting" id="backupDataBtn" title="Backup &amp; Restore Data">
+          <span>💾</span>
+          <span>Backup &amp; Restore</span>
         </button>
       </div>
     </aside>
@@ -421,33 +416,20 @@
           <!-- Instant Clipboard Sync (Mobile <-> Laptop 1-Tap Transfer) -->
           <div
             style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-card);">
-            <h4 style="font-size: 0.95rem; margin-bottom: 0.35rem; color: var(--text-main);">📋 1-Tap Clipboard Transfer</h4>
+            <h4 style="font-size: 0.95rem; margin-bottom: 0.35rem; color: var(--text-main);">📋 1-Tap Clipboard Transfer
+            </h4>
             <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.75rem;">
               Transfer all your topics and notes between mobile and laptop in 1 second.
             </p>
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <button type="button" class="btn-secondary" id="copyClipboardDataBtn" style="flex: 1; min-width: 140px; font-size: 0.82rem;">
+              <button type="button" class="btn-secondary" id="copyClipboardDataBtn"
+                style="flex: 1; min-width: 140px; font-size: 0.82rem;">
                 📋 Copy All Data
               </button>
-              <button type="button" class="btn-primary" id="pasteClipboardDataBtn" style="flex: 1; min-width: 140px; font-size: 0.82rem;">
+              <button type="button" class="btn-primary" id="pasteClipboardDataBtn"
+                style="flex: 1; min-width: 140px; font-size: 0.82rem;">
                 📥 Paste &amp; Merge Data
               </button>
-            </div>
-          </div>
-
-          <!-- Real-Time Device Sync (WebRTC Peer & Cloud) -->
-          <div
-            style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-card);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-              <h4 style="font-size: 0.95rem; color: var(--text-main); margin: 0;">🌐 Live Device Sync</h4>
-              <span id="syncStatusBadge" style="font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; background: rgba(16, 185, 129, 0.15); color: #10b981; font-weight: 700;">🟢 Online Sync Active</span>
-            </div>
-            <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.75rem;">
-              Automatically syncs topics and notes between your phone and laptop in real-time.
-            </p>
-            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-              <input type="text" id="cloudDbUrlInput" class="form-input" style="flex: 1; min-width: 180px; font-size: 0.82rem;" placeholder="Firebase RTDB URL (optional custom)">
-              <button type="button" class="btn-primary" id="saveCloudSyncBtn" style="height: 36px; padding: 0 10px; font-size: 0.82rem; white-space: nowrap;">Connect</button>
             </div>
           </div>
         </div>
@@ -571,10 +553,9 @@
   <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
   <!-- Application Logic Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <script src="js/seed-data.js?v=2.7"></script>
-  <script src="js/sync-engine.js?v=2.7"></script>
-  <script src="js/app.js?v=2.7"></script>
+  <script src="js/seed-data.js?v=2.8"></script>
+  <script src="js/sync-engine.js?v=2.8"></script>
+  <script src="js/app.js?v=2.8"></script>
 </body>
 
 </html>

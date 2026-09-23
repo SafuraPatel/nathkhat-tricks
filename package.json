@@ -1,0 +1,13 @@
+{
+  "name": "nathkhat-tricks",
+  "version": "2.8.0",
+  "private": true,
+  "description": "NathKhat UGC NET Paper 1 & Paper 2 Revision Hub with Silent Cloud Persistence",
+  "scripts": {
+    "build": "echo 'Ready for Netlify deployment'"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0",
+    "@netlify/functions": "^2.8.2"
+  }
+}

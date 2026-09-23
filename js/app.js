@@ -28,7 +28,9 @@ const STORAGE_KEYS = {
   NOTEPAD: 'nathkhat_notepad_v1',
   THEME: 'nathkhat_theme_v1',
   ACTIVE_VIEW: 'nathkhat_active_view_v1',
-  ACTIVE_PAPER: 'nathkhat_active_paper_v1'
+  ACTIVE_PAPER: 'nathkhat_active_paper_v1',
+  LAST_SYNC: 'nathkhat_last_sync_v1',
+  TOPICS_MODIFIED: 'nathkhat_topics_modified_v1'
 };
 
 // DOM Elements
@@ -846,10 +848,8 @@ function saveTopicForm() {
   // CLOSE the add or edit section immediately!
   closeTopicModal(false);
 
-  // Push to cloud sync so it is instantly visible to all other users
-  if (savedTopicItem && typeof SyncEngine !== 'undefined') {
-    SyncEngine.pushTopic(savedTopicItem);
-  }
+  // Directly apply and push to cloud sync so it is instantly visible to all
+  syncGlobally();
 
   // NOTE: Do not scroll away, stay on the exact same page position!
 }
@@ -873,6 +873,7 @@ function duplicateTopic(topicId) {
   updateBadges();
   renderIndex();
   renderTopics();
+  syncGlobally();
   showToast(`Duplicated "${topic.title}" and added to top of Index!`, 'success');
   jumpToTopic(cloned.id);
 }
@@ -1322,10 +1323,8 @@ function saveNoteForm(e) {
   // CLOSE the add/edit note section immediately!
   closeNoteModal(false);
 
-  // Directly apply and push to cloud sync
-  if (savedNoteItem && typeof SyncEngine !== 'undefined' && SyncEngine.pushNote) {
-    SyncEngine.pushNote(savedNoteItem);
-  }
+  // Directly apply and push to persistent cloud sync
+  syncGlobally();
 }
 
 function deleteNote(noteId) {
@@ -1341,9 +1340,7 @@ function deleteNote(noteId) {
   updateBadges();
   renderNotes();
 
-  if (typeof SyncEngine !== 'undefined' && SyncEngine.deleteNote) {
-    SyncEngine.deleteNote(noteId);
-  }
+  syncGlobally();
 
   showToast(`Deleted note: "${note.title}"`, 'info');
 }
@@ -1403,9 +1400,7 @@ function moveToBin(topicId) {
   renderTopics();
   renderBin();
 
-  if (typeof SyncEngine !== 'undefined') {
-    SyncEngine.deleteTopic(topicId);
-  }
+  syncGlobally();
 
   showToast(`Moved "${topic.title}" to Recycle Bin`, 'info');
 }
@@ -1427,9 +1422,7 @@ function restoreFromBin(topicId) {
   renderIndex();
   renderBin();
 
-  if (typeof SyncEngine !== 'undefined') {
-    SyncEngine.pushTopic(topic);
-  }
+  syncGlobally();
 
   showToast(`Restored "${topic.title}" back to top of Index!`, 'success');
 }
@@ -1446,9 +1439,7 @@ function deletePermanently(topicId) {
   saveBin();
   updateBadges();
   renderBin();
-  if (typeof SyncEngine !== 'undefined') {
-    SyncEngine.deleteTopic(topicId);
-  }
+  syncGlobally();
   showToast('Topic permanently deleted', 'error');
 }
 
@@ -1466,6 +1457,7 @@ function emptyBin() {
   saveBin();
   updateBadges();
   renderBin();
+  syncGlobally();
   showToast('Recycle Bin emptied completely', 'error');
 }
 
@@ -1574,6 +1566,7 @@ function importBackupJson(e) {
         saveTopics();
         saveBin();
         saveNotes();
+        syncGlobally();
 
         updateBadges();
         renderIndex();
@@ -1694,12 +1687,6 @@ function setupEventListeners() {
   if (DOM.exportJsonBtn) DOM.exportJsonBtn.addEventListener('click', exportBackupJson);
   if (DOM.importJsonInput) DOM.importJsonInput.addEventListener('change', importBackupJson);
 
-  // Live Sync Pill
-  const liveSyncPill = document.getElementById('liveSyncPill');
-  if (liveSyncPill) {
-    liveSyncPill.addEventListener('click', openBackupModal);
-  }
-
   // 1-Tap Clipboard Data Transfer
   const copyClipboardDataBtn = document.getElementById('copyClipboardDataBtn');
   const pasteClipboardDataBtn = document.getElementById('pasteClipboardDataBtn');
@@ -1766,6 +1753,7 @@ function setupEventListeners() {
             });
             saveNotes();
           }
+          syncGlobally();
           updateBadges();
           renderIndex();
           renderTopics();
@@ -1909,33 +1897,69 @@ function restoreScrollPosition() {
 }
 
 /* ==========================================================================
-   Dynamic Cloud Synchronization (Visible to all users instantly)
+   Silent Cloud Persistence & Synchronization (Visible to all users directly)
    ========================================================================== */
+
+function syncGlobally() {
+  const now = Date.now();
+  localStorage.setItem(STORAGE_KEYS.LAST_SYNC, now.toString());
+  localStorage.setItem(STORAGE_KEYS.TOPICS_MODIFIED, 'true');
+
+  if (typeof SyncEngine !== 'undefined' && SyncEngine.pushData) {
+    SyncEngine.pushData({
+      topics: STATE.topics,
+      notes: STATE.notes,
+      bin: STATE.bin,
+      updatedAt: now
+    });
+  }
+}
+
+function onRemoteDataReceived(remote, source) {
+  if (!remote) return;
+
+  const localLastSync = parseInt(localStorage.getItem(STORAGE_KEYS.LAST_SYNC) || '0', 10);
+  const remoteUpdatedAt = remote.updatedAt || 0;
+
+  // Check if local is only initial untouched seed data
+  const isLocalSeedOnly = (
+    STATE.topics.length <= 4 &&
+    STATE.topics.every(t => t.id && t.id.startsWith('topic-p')) &&
+    !localStorage.getItem(STORAGE_KEYS.TOPICS_MODIFIED)
+  );
+
+  const shouldApplyRemote = (
+    remoteUpdatedAt > localLastSync ||
+    (isLocalSeedOnly && Array.isArray(remote.topics) && remote.topics.length > 0)
+  );
+
+  if (shouldApplyRemote) {
+    if (Array.isArray(remote.topics)) {
+      STATE.topics = remote.topics;
+      localStorage.setItem(STORAGE_KEYS.TOPICS, JSON.stringify(STATE.topics));
+    }
+    if (Array.isArray(remote.notes)) {
+      STATE.notes = remote.notes;
+      localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(STATE.notes));
+    }
+    if (Array.isArray(remote.bin)) {
+      STATE.bin = remote.bin;
+      localStorage.setItem(STORAGE_KEYS.BIN, JSON.stringify(STATE.bin));
+    }
+
+    localStorage.setItem(STORAGE_KEYS.LAST_SYNC, Math.max(remoteUpdatedAt, Date.now()).toString());
+
+    // Seamlessly update badges and views without any alerts, toasts, or scroll jumps
+    updateBadges();
+    renderIndex();
+    renderTopics();
+    renderNotes();
+    renderBin();
+  }
+}
 
 function initCloudSync() {
   if (typeof SyncEngine === 'undefined') return;
-
-  const cloudInput = document.getElementById('cloudDbUrlInput');
-  const saveCloudBtn = document.getElementById('saveCloudSyncBtn');
-
-  if (cloudInput) {
-    cloudInput.value = SyncEngine.getCloudUrl() || '';
-  }
-
-  if (saveCloudBtn && cloudInput) {
-    saveCloudBtn.addEventListener('click', async () => {
-      const url = cloudInput.value.trim();
-      SyncEngine.setCloudUrl(url);
-      const ok = await SyncEngine.testConnection();
-      if (ok) {
-        // Sync and push local topics to cloud so everyone gets them
-        SyncEngine.pushAllTopics(STATE.topics);
-        alert('Connected to Cloud Sync! Changes are now visible to all users.');
-      } else {
-        alert('Could not connect to that endpoint. Please check URL.');
-      }
-    });
-  }
 
   // Multi-tab / cross-window real-time synchronization
   window.addEventListener('storage', (e) => {
@@ -1970,97 +1994,10 @@ function initCloudSync() {
     }
   });
 
-  // Start live WebRTC peer-to-peer sync and merge remote data
-  SyncEngine.startLiveSync({
-    getCurrentData: () => ({
-      topics: STATE.topics,
-      notes: STATE.notes,
-      bin: STATE.bin
-    }),
-    onMergeData: (remote) => {
-      if (!remote) return;
-      let changed = false;
-      if (Array.isArray(remote.topics)) {
-        remote.topics.forEach(rt => {
-          if (!rt || !rt.id) return;
-          const idx = STATE.topics.findIndex(t => t.id === rt.id);
-          if (idx === -1) {
-            STATE.topics.unshift(rt);
-            changed = true;
-          } else if ((rt.updatedAt || 0) > (STATE.topics[idx].updatedAt || 0)) {
-            STATE.topics[idx] = rt;
-            changed = true;
-          }
-        });
-      }
-      if (Array.isArray(remote.notes)) {
-        remote.notes.forEach(rn => {
-          if (!rn || !rn.id) return;
-          const idx = STATE.notes.findIndex(n => n.id === rn.id);
-          if (idx === -1) {
-            STATE.notes.unshift(rn);
-            changed = true;
-          } else if ((rn.updatedAt || 0) > (STATE.notes[idx].updatedAt || 0)) {
-            STATE.notes[idx] = rn;
-            changed = true;
-          }
-        });
-      }
-      if (changed) {
-        saveTopics();
-        saveNotes();
-        updateBadges();
-        renderIndex();
-        renderTopics();
-        renderNotes();
-        showToast('Live Synced with connected device!', 'success');
-      }
-    },
-    onTopicReceived: (topic) => {
-      if (!topic || !topic.id) return;
-      const idx = STATE.topics.findIndex(t => t.id === topic.id);
-      if (idx === -1) {
-        STATE.topics.unshift(topic);
-      } else {
-        STATE.topics[idx] = topic;
-      }
-      saveTopics();
-      updateBadges();
-      renderIndex();
-      renderTopics();
-      showToast(`Live received: "${topic.title}"`, 'success');
-    },
-    onTopicDeleted: (topicId) => {
-      const idx = STATE.topics.findIndex(t => t.id === topicId);
-      if (idx !== -1) {
-        STATE.topics.splice(idx, 1);
-        saveTopics();
-        updateBadges();
-        renderIndex();
-        renderTopics();
-      }
-    },
-    onNoteReceived: (note) => {
-      if (!note || !note.id) return;
-      const idx = STATE.notes.findIndex(n => n.id === note.id);
-      if (idx === -1) {
-        STATE.notes.unshift(note);
-      } else {
-        STATE.notes[idx] = note;
-      }
-      saveNotes();
-      updateBadges();
-      renderNotes();
-      showToast(`Live note: "${note.title}"`, 'success');
-    },
-    onNoteDeleted: (noteId) => {
-      const idx = STATE.notes.findIndex(n => n.id === noteId);
-      if (idx !== -1) {
-        STATE.notes.splice(idx, 1);
-        saveNotes();
-        updateBadges();
-        renderNotes();
-      }
+  // Start silent cloud sync (Netlify Blobs + BroadcastChannel)
+  SyncEngine.startSilentSync({
+    onRemoteUpdate: (remote, source) => {
+      onRemoteDataReceived(remote, source);
     }
   });
 }

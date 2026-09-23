@@ -1,333 +1,193 @@
 /**
- * NathKhat - Real-Time Multi-Device Synchronization Engine
- * Powered by WebRTC (PeerJS) for instant mobile <-> laptop live sync,
- * BroadcastChannel for zero-latency cross-tab sync, and optional Cloud DB REST.
+ * NathKhat - Seamless Cloud Persistence & Cross-Tab Synchronization Engine
+ * Operates completely in the background without UI banners, status pills, or connection prompts.
+ * Automatically synchronizes topics, notes, and recycle bin data via Netlify Blobs
+ * and BroadcastChannel so changes are visible to all users across all devices.
  */
 
 const SyncEngine = (function() {
-  const STORAGE_KEY_CLOUD_URL = 'nathkhat_cloud_url_v1';
-  const DEFAULT_CLOUD_URL = '';
-  const ROOM_PREFIX = 'nathkhat-tricks-vault-v1';
-  const MAX_SLOTS = 4;
+  const NETLIFY_SYNC_ENDPOINT = '/.netlify/functions/sync';
+  const STORAGE_KEY_CUSTOM_URL = 'nathkhat_cloud_url_v1';
+  const STORAGE_KEY_LAST_PULL = 'nathkhat_last_cloud_pull_v1';
 
-  let cloudUrl = localStorage.getItem(STORAGE_KEY_CLOUD_URL) || DEFAULT_CLOUD_URL;
   let broadcastChannel = null;
-  let peerInstance = null;
-  let mySlot = null;
-  let activePeerConns = [];
-  let pollInterval = null;
-  let callbacks = {
-    getCurrentData: null,
-    onMergeData: null,
-    onTopicReceived: null,
-    onTopicDeleted: null,
-    onNoteReceived: null,
-    onNoteDeleted: null
-  };
+  let customCloudUrl = localStorage.getItem(STORAGE_KEY_CUSTOM_URL) || '';
+  let backgroundInterval = null;
+  let onRemoteUpdateCallback = null;
+  let isPushing = false;
+  let lastPushTimestamp = 0;
 
-  // 1. Setup Cross-Tab BroadcastChannel
+  // 1. Instant Cross-Tab BroadcastChannel
   try {
     if (window.BroadcastChannel) {
       broadcastChannel = new BroadcastChannel('nathkhat_tab_sync');
       broadcastChannel.onmessage = (event) => {
-        if (!event.data) return;
+        if (!event || !event.data) return;
         const { type, payload } = event.data;
-        handleIncomingMessage(type, payload);
+        if (type === 'SNAPSHOT_UPDATE' && payload && typeof onRemoteUpdateCallback === 'function') {
+          onRemoteUpdateCallback(payload, 'tab');
+        }
       };
     }
   } catch (e) {
-    console.warn('BroadcastChannel not supported:', e);
+    // BroadcastChannel unsupported in private or older browsers; fails gracefully
   }
 
-  function handleIncomingMessage(type, payload) {
-    if (!type || !payload) return;
-    if (type === 'HANDSHAKE' && typeof callbacks.onMergeData === 'function') {
-      callbacks.onMergeData(payload);
-    } else if (type === 'TOPIC_SAVED' && typeof callbacks.onTopicReceived === 'function') {
-      callbacks.onTopicReceived(payload);
-    } else if (type === 'TOPIC_DELETED' && typeof callbacks.onTopicDeleted === 'function') {
-      callbacks.onTopicDeleted(payload);
-    } else if (type === 'NOTE_SAVED' && typeof callbacks.onNoteReceived === 'function') {
-      callbacks.onNoteReceived(payload);
-    } else if (type === 'NOTE_DELETED' && typeof callbacks.onNoteDeleted === 'function') {
-      callbacks.onNoteDeleted(payload);
-    }
-  }
+  // 2. Fetch Latest Remote Data from Serverless Netlify Blobs or Cloud DB
+  async function fetchRemoteData() {
+    // Try Netlify Serverless Cloud Persistence first
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-  // Update UI Pill Status
-  function updatePillStatus(state, text) {
-    const pill = document.getElementById('liveSyncPill');
-    const pillText = document.getElementById('liveSyncText');
-    const badge = document.getElementById('syncStatusBadge');
-
-    if (pill) {
-      pill.className = `live-sync-pill ${state}`;
-    }
-    if (pillText) {
-      pillText.textContent = text;
-    }
-    if (badge) {
-      if (state === 'connected') {
-        badge.textContent = `🟢 ${text}`;
-        badge.style.background = 'rgba(16, 185, 129, 0.15)';
-        badge.style.color = '#10b981';
-      } else {
-        badge.textContent = `🟡 ${text}`;
-        badge.style.background = 'rgba(245, 158, 11, 0.15)';
-        badge.style.color = '#f59e0b';
-      }
-    }
-  }
-
-  // 2. PeerJS WebRTC Multi-Device Sync Engine
-  function initPeerSync() {
-    if (typeof Peer === 'undefined') {
-      console.warn('PeerJS library not available, continuing with local & broadcast sync.');
-      updatePillStatus('connecting', 'Local Storage Ready');
-      return;
-    }
-
-    trySlot(1);
-  }
-
-  function trySlot(slotNum) {
-    if (slotNum > MAX_SLOTS) {
-      console.log('All primary peer slots occupied, running client listener.');
-      updatePillStatus('connecting', 'Waiting for peer...');
-      return;
-    }
-
-    const slotId = `${ROOM_PREFIX}-s${slotNum}`;
-    const p = new Peer(slotId, {
-      debug: 0,
-      config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' },
-          { urls: 'stun:stun2.l.google.com:19302' }
-        ]
-      }
-    });
-
-    p.on('open', (id) => {
-      mySlot = slotNum;
-      peerInstance = p;
-      console.log(`Registered PeerJS slot: ${slotId}`);
-      updatePillStatus('connecting', 'Live Sync: Ready');
-
-      // Listen for incoming connections
-      peerInstance.on('connection', (conn) => {
-        setupPeerConnection(conn);
+      const res = await fetch(NETLIFY_SYNC_ENDPOINT, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        signal: controller.signal
       });
 
-      // Connect to other slots
-      connectToOtherSlots();
+      clearTimeout(timeoutId);
 
-      // Periodically probe for new/reconnecting devices every 12 seconds
-      if (pollInterval) clearInterval(pollInterval);
-      pollInterval = setInterval(() => {
-        if (activePeerConns.length === 0) {
-          connectToOtherSlots();
+      if (res.ok) {
+        const data = await res.json();
+        if (data && (Array.isArray(data.topics) || Array.isArray(data.notes))) {
+          return data;
         }
-      }, 12000);
-    });
-
-    p.on('error', (err) => {
-      if (err.type === 'unavailable-id') {
-        // Slot is already claimed by another device (e.g. laptop), try next slot!
-        try { p.destroy(); } catch (e) {}
-        trySlot(slotNum + 1);
-      } else {
-        console.warn('PeerJS error:', err.type, err);
       }
-    });
-  }
+    } catch (e) {
+      // Netlify function unreachable (e.g. running offline or local static server)
+    }
 
-  function connectToOtherSlots() {
-    if (!peerInstance || !mySlot) return;
-
-    for (let i = 1; i <= MAX_SLOTS; i++) {
-      if (i === mySlot) continue;
-      const targetId = `${ROOM_PREFIX}-s${i}`;
-      // Check if already connected
-      const exists = activePeerConns.some(c => c.peer === targetId);
-      if (exists) continue;
-
+    // Optional Custom Cloud Endpoint (Firebase RTDB / REST)
+    if (customCloudUrl) {
       try {
-        const conn = peerInstance.connect(targetId, { reliable: true });
-        setupPeerConnection(conn);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+        const res = await fetch(`${customCloudUrl}/vault.json`, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && (Array.isArray(data.topics) || Array.isArray(data.notes))) {
+            return data;
+          }
+        }
       } catch (e) {}
     }
+
+    return null;
   }
 
-  function setupPeerConnection(conn) {
-    if (!conn) return;
+  // 3. Silently Push Snapshot to Cloud & Local Tabs
+  async function pushData(data) {
+    if (!data) return;
+    const now = Date.now();
+    lastPushTimestamp = now;
 
-    conn.on('open', () => {
-      console.log('Peer connected:', conn.peer);
-      if (!activePeerConns.includes(conn)) {
-        activePeerConns.push(conn);
-      }
-      updatePillStatus('connected', 'Live: Connected');
+    const payload = {
+      topics: Array.isArray(data.topics) ? data.topics : [],
+      notes: Array.isArray(data.notes) ? data.notes : [],
+      bin: Array.isArray(data.bin) ? data.bin : [],
+      updatedAt: now
+    };
 
-      // Send local data to remote peer on connect
-      if (typeof callbacks.getCurrentData === 'function') {
-        const localData = callbacks.getCurrentData();
-        try {
-          conn.send({ type: 'HANDSHAKE', payload: localData });
-        } catch (e) {}
-      }
-    });
-
-    conn.on('data', (msg) => {
-      if (!msg || !msg.type) return;
-      handleIncomingMessage(msg.type, msg.payload);
-    });
-
-    conn.on('close', () => {
-      activePeerConns = activePeerConns.filter(c => c !== conn);
-      if (activePeerConns.length === 0) {
-        updatePillStatus('connecting', 'Waiting for device...');
-      } else {
-        updatePillStatus('connected', `Live: Connected (${activePeerConns.length})`);
-      }
-    });
-
-    conn.on('error', () => {
-      activePeerConns = activePeerConns.filter(c => c !== conn);
-    });
-  }
-
-  // 3. Broadcast to all active peer connections & local tabs
-  function broadcast(type, payload) {
-    // A. Send to all open WebRTC peers (mobile, laptop)
-    activePeerConns.forEach(conn => {
-      try {
-        if (conn && conn.open) {
-          conn.send({ type, payload });
-        }
-      } catch (e) {}
-    });
-
-    // B. Send to local browser tabs
+    // A. Broadcast to any other open tabs immediately
     if (broadcastChannel) {
       try {
-        broadcastChannel.postMessage({ type, payload });
+        broadcastChannel.postMessage({
+          type: 'SNAPSHOT_UPDATE',
+          payload
+        });
       } catch (e) {}
     }
-  }
 
-  function pushTopic(topic) {
-    if (!topic || !topic.id) return;
-    broadcast('TOPIC_SAVED', topic);
-    pushCloudTopic(topic);
-  }
-
-  function deleteTopic(topicId) {
-    if (!topicId) return;
-    broadcast('TOPIC_DELETED', topicId);
-    deleteCloudTopic(topicId);
-  }
-
-  function pushNote(note) {
-    if (!note || !note.id) return;
-    broadcast('NOTE_SAVED', note);
-    pushCloudNote(note);
-  }
-
-  function deleteNote(noteId) {
-    if (!noteId) return;
-    broadcast('NOTE_DELETED', noteId);
-    deleteCloudNote(noteId);
-  }
-
-  // 4. Cloud REST Engine (Optional fallback for Firebase / custom endpoint)
-  function getCloudUrl() {
-    return cloudUrl;
-  }
-
-  function setCloudUrl(url) {
-    cloudUrl = url ? url.trim().replace(/\/+$/, '') : '';
-    localStorage.setItem(STORAGE_KEY_CLOUD_URL, cloudUrl);
-    testConnection();
-  }
-
-  async function testConnection() {
-    if (!cloudUrl) {
-      updatePillStatus('connecting', 'Live Sync Active');
-      return true;
-    }
+    // B. Push to Netlify Blobs Serverless Backend
+    isPushing = true;
     try {
-      const res = await fetch(`${cloudUrl}/health.json`, { method: 'GET', mode: 'cors' });
-      const ok = res.ok || res.status === 404;
-      updatePillStatus(ok ? 'connected' : 'connecting', ok ? 'Cloud Sync Online' : 'Cloud Offline');
-      return ok;
-    } catch (e) {
-      updatePillStatus('connecting', 'Cloud Offline');
-      return false;
-    }
-  }
-
-  async function pushCloudTopic(topic) {
-    if (!cloudUrl || !topic || !topic.id) return;
-    try {
-      await fetch(`${cloudUrl}/topics/${encodeURIComponent(topic.id)}.json`, {
-        method: 'PUT',
+      fetch(NETLIFY_SYNC_ENDPOINT, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(topic),
-        mode: 'cors'
-      });
+        body: JSON.stringify(payload)
+      }).catch(() => {});
     } catch (e) {}
+
+    // C. Push to Custom Cloud URL if configured
+    if (customCloudUrl) {
+      try {
+        fetch(`${customCloudUrl}/vault.json`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
+    setTimeout(() => {
+      isPushing = false;
+    }, 1500);
   }
 
-  async function deleteCloudTopic(topicId) {
-    if (!cloudUrl || !topicId) return;
-    try {
-      await fetch(`${cloudUrl}/topics/${encodeURIComponent(topicId)}.json`, {
-        method: 'DELETE',
-        mode: 'cors'
-      });
-    } catch (e) {}
+  // 4. Start Background Silent Sync (No UI Clutter)
+  function startSilentSync(callbacks) {
+    if (callbacks && typeof callbacks.onRemoteUpdate === 'function') {
+      onRemoteUpdateCallback = callbacks.onRemoteUpdate;
+    }
+
+    // Initial check in background
+    triggerBackgroundPull();
+
+    // Check periodically in background every 25 seconds
+    if (backgroundInterval) clearInterval(backgroundInterval);
+    backgroundInterval = setInterval(() => {
+      triggerBackgroundPull();
+    }, 25000);
+
+    // Also check when tab becomes active / user refocuses window
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        triggerBackgroundPull();
+      }
+    });
+
+    window.addEventListener('focus', () => {
+      triggerBackgroundPull();
+    });
   }
 
-  async function pushCloudNote(note) {
-    if (!cloudUrl || !note || !note.id) return;
-    try {
-      await fetch(`${cloudUrl}/notes/${encodeURIComponent(note.id)}.json`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(note),
-        mode: 'cors'
-      });
-    } catch (e) {}
+  async function triggerBackgroundPull() {
+    // Don't pull immediately if we just pushed data ourselves
+    if (isPushing || Date.now() - lastPushTimestamp < 3000) return;
+
+    const remote = await fetchRemoteData();
+    if (remote && typeof onRemoteUpdateCallback === 'function') {
+      onRemoteUpdateCallback(remote, 'cloud');
+    }
   }
 
-  async function deleteCloudNote(noteId) {
-    if (!cloudUrl || !noteId) return;
-    try {
-      await fetch(`${cloudUrl}/notes/${encodeURIComponent(noteId)}.json`, {
-        method: 'DELETE',
-        mode: 'cors'
-      });
-    } catch (e) {}
+  function getCustomUrl() {
+    return customCloudUrl;
   }
 
-  // 5. Initialize Live Sync with App Callbacks
-  function startLiveSync(appCallbacks) {
-    callbacks = { ...callbacks, ...appCallbacks };
-
-    // Start WebRTC peer discovery & sync
-    initPeerSync();
+  function setCustomUrl(url) {
+    customCloudUrl = url ? url.trim().replace(/\/+$/, '') : '';
+    if (customCloudUrl) {
+      localStorage.setItem(STORAGE_KEY_CUSTOM_URL, customCloudUrl);
+    } else {
+      localStorage.removeItem(STORAGE_KEY_CUSTOM_URL);
+    }
   }
 
   return {
-    getCloudUrl,
-    setCloudUrl,
-    testConnection,
-    pushTopic,
-    deleteTopic,
-    pushNote,
-    deleteNote,
-    startLiveSync
+    fetchRemoteData,
+    pushData,
+    startSilentSync,
+    getCustomUrl,
+    setCustomUrl
   };
 })();
