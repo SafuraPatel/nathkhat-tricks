@@ -16,7 +16,7 @@
     rel="stylesheet">
 
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/style.css?v=2.5">
+  <link rel="stylesheet" href="css/style.css?v=2.6">
 </head>
 
 <body>
@@ -67,16 +67,11 @@
         </div>
       </div>
 
-      <!-- Header Actions (Theme, Backup) -->
+      <!-- Header Actions (Theme) -->
       <div class="header-actions">
         <button type="button" class="btn-icon" id="themeToggleBtn" title="Toggle Dark / Light Theme"
           aria-label="Toggle Theme">
           <span id="themeIcon">🌙</span>
-        </button>
-
-        <button type="button" class="btn-icon" id="backupDataBtn" title="Backup or Restore Data (JSON)"
-          aria-label="Backup / Restore">
-          <span>💾</span>
         </button>
       </div>
     </header>
@@ -139,6 +134,14 @@
       <!-- Index Dynamic Topics List (New topics always appear at top) -->
       <div class="index-list-container" id="indexList" role="navigation" aria-label="Topic Index">
         <!-- Rendered dynamically via JavaScript -->
+      </div>
+
+      <!-- Index Footer Actions (Cloud Sync & Backup) -->
+      <div class="index-footer">
+        <button type="button" class="btn-sync-setting" id="backupDataBtn" title="Cloud Sync &amp; Backup">
+          <span>🌐</span>
+          <span>Cloud Sync &amp; Backup</span>
+        </button>
       </div>
     </aside>
 
@@ -546,9 +549,9 @@
   <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
   <!-- Application Logic Scripts -->
-  <script src="js/seed-data.js?v=2.5"></script>
-  <script src="js/sync-engine.js?v=2.5"></script>
-  <script src="js/app.js?v=2.5"></script>
+  <script src="js/seed-data.js?v=2.6"></script>
+  <script src="js/sync-engine.js?v=2.6"></script>
+  <script src="js/app.js?v=2.6"></script>
 </body>
 
 </html>
