@@ -82,7 +82,6 @@ const DOM = {
   notesEmptyState: document.getElementById('notesEmptyState'),
   emptyStateAddNoteBtn: document.getElementById('emptyStateAddNoteBtn'),
   openAddNoteBtn: document.getElementById('openAddNoteBtn'),
-  notepadSyncStatus: document.getElementById('notepadSyncStatus'),
 
   // Note Modal (Word-like Rich Text)
   noteModal: document.getElementById('noteModal'),
@@ -716,14 +715,19 @@ function saveTopicForm() {
   const explanation = sanitizeHtml(rawExplanation) || '<p>No detailed explanation added yet.</p>';
 
   if (!title) {
-    showToast('Please enter a topic name', 'error');
+    alert('Please enter a topic name');
     DOM.topicTitleInput.focus();
     return;
   }
 
   if (!trick) {
-    showToast('Please enter a Trick or memory hook', 'error');
+    alert('Please enter a Trick or memory hook');
     DOM.topicTrickInput.focus();
+    return;
+  }
+
+  // Ask confirmation before saving permanently
+  if (!confirm('Are you sure for saving it permanently?')) {
     return;
   }
 
@@ -745,7 +749,6 @@ function saveTopicForm() {
       // Move edited topic to TOP of array as recently updated
       const updatedTopic = STATE.topics.splice(index, 1)[0];
       STATE.topics.unshift(updatedTopic);
-      showToast(`Updated "${title}" and moved to top of index`, 'success');
     }
   } else {
     // ADD NEW TOPIC: Place at the VERY TOP of the array so it's top on Index!
@@ -761,7 +764,6 @@ function saveTopicForm() {
     };
 
     STATE.topics.unshift(newTopic); // Top of the list
-    showToast(`New topic "${title}" added to the top of Index!`, 'success');
   }
 
   saveTopics();
@@ -770,11 +772,8 @@ function saveTopicForm() {
   renderTopics();
   closeTopicModal();
 
-  // Scroll and jump highlight the saved topic!
-  const targetId = STATE.editingTopicId || STATE.topics[0].id;
-  setTimeout(() => {
-    jumpToTopic(targetId);
-  }, 150);
+  // Scroll to top of topics
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function duplicateTopic(topicId) {
@@ -1192,14 +1191,19 @@ function saveNoteForm(e) {
   const textCheck = DOM.noteExplanationEditor ? DOM.noteExplanationEditor.textContent.trim() : '';
 
   if (!title) {
-    showToast('Please enter a note title', 'error');
+    alert('Please enter a note title');
     DOM.noteTitleInput.focus();
     return;
   }
 
   if (!textCheck && !rawContent.includes('<img') && !rawContent.includes('<table')) {
-    showToast('Please write some content for the note', 'error');
+    alert('Please write some content for the note');
     if (DOM.noteExplanationEditor) DOM.noteExplanationEditor.focus();
+    return;
+  }
+
+  // Ask confirmation before saving permanently
+  if (!confirm('Are you sure for saving it permanently?')) {
     return;
   }
 
@@ -1213,7 +1217,6 @@ function saveNoteForm(e) {
       note.tag = tag;
       note.content = content;
       note.updatedAt = Date.now();
-      showToast(`Updated note: "${title}"`, 'success');
     }
   } else {
     // Create new note (add to TOP)
@@ -1226,7 +1229,6 @@ function saveNoteForm(e) {
       updatedAt: Date.now()
     };
     STATE.notes.unshift(newNote);
-    showToast(`Added new note: "${title}"`, 'success');
   }
 
   saveNotes();
