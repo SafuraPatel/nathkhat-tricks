@@ -1928,9 +1928,17 @@ function onRemoteDataReceived(remote, source) {
     !localStorage.getItem(STORAGE_KEYS.TOPICS_MODIFIED)
   );
 
+  const hasContentDifferences = (
+    (Array.isArray(remote.topics) && (remote.topics.length !== STATE.topics.length || JSON.stringify(remote.topics) !== JSON.stringify(STATE.topics))) ||
+    (Array.isArray(remote.notes) && (remote.notes.length !== STATE.notes.length || JSON.stringify(remote.notes) !== JSON.stringify(STATE.notes))) ||
+    (Array.isArray(remote.bin) && (remote.bin.length !== STATE.bin.length))
+  );
+
   const shouldApplyRemote = (
     remoteUpdatedAt > localLastSync ||
-    (isLocalSeedOnly && Array.isArray(remote.topics) && remote.topics.length > 0)
+    (isLocalSeedOnly && Array.isArray(remote.topics) && remote.topics.length > 0) ||
+    (source === 'tab') ||
+    (hasContentDifferences && remoteUpdatedAt >= localLastSync)
   );
 
   if (shouldApplyRemote) {

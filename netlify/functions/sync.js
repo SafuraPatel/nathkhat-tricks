@@ -1,4 +1,4 @@
-const { getStore } = require("@netlify/blobs");
+const { getStore, connectLambda } = require("@netlify/blobs");
 
 exports.handler = async (event, context) => {
   const headers = {
@@ -18,6 +18,13 @@ exports.handler = async (event, context) => {
   }
 
   try {
+    // Connect Lambda context for Netlify Blobs compatibility
+    if (typeof connectLambda === "function") {
+      try {
+        connectLambda(event);
+      } catch (e) {}
+    }
+
     const store = getStore("nathkhat_vault");
 
     if (event.httpMethod === "GET") {
@@ -26,6 +33,18 @@ exports.handler = async (event, context) => {
         data = await store.get("app_data", { type: "json" });
       } catch (getErr) {
         console.warn("Netlify Blobs read notice:", getErr.message);
+      }
+
+      // Lightweight timestamp check
+      const query = event.queryStringParameters || {};
+      if (query.timestamp_only === "1") {
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({
+            updatedAt: data && data.updatedAt ? data.updatedAt : 0
+          })
+        };
       }
 
       return {
