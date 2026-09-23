@@ -146,14 +146,18 @@ const DOM = {
    ========================================================================== */
 
 function initApp() {
-  loadStoredData();
-  setupEventListeners();
-  applyTheme(STATE.theme);
-  updateBadges();
-  renderIndex();
-  renderTopics();
-  renderNotepad();
-  renderBin();
+  try {
+    loadStoredData();
+    setupEventListeners();
+    applyTheme(STATE.theme);
+    updateBadges();
+    renderIndex();
+    renderTopics();
+    renderNotepad();
+    renderBin();
+  } catch (err) {
+    console.error('NathKhat initialization error:', err);
+  }
 }
 
 function loadStoredData() {
@@ -170,13 +174,20 @@ function loadStoredData() {
   if (savedTopics) {
     try {
       STATE.topics = JSON.parse(savedTopics);
+      if (!Array.isArray(STATE.topics) || STATE.topics.length === 0) {
+        if (typeof SEED_TOPICS !== 'undefined' && SEED_TOPICS.length > 0) {
+          STATE.topics = [...SEED_TOPICS];
+          saveTopics();
+        }
+      }
     } catch (e) {
       console.error('Failed to parse stored topics, loading seed data.', e);
-      STATE.topics = [...SEED_TOPICS];
+      STATE.topics = typeof SEED_TOPICS !== 'undefined' ? [...SEED_TOPICS] : [];
+      saveTopics();
     }
   } else {
     // Initial Seed Data
-    STATE.topics = [...SEED_TOPICS];
+    STATE.topics = typeof SEED_TOPICS !== 'undefined' ? [...SEED_TOPICS] : [];
     saveTopics();
   }
 
@@ -195,8 +206,15 @@ function loadStoredData() {
   if (savedNotes) {
     try {
       STATE.notes = JSON.parse(savedNotes);
+      if (!Array.isArray(STATE.notes) || STATE.notes.length === 0) {
+        if (typeof SEED_NOTES !== 'undefined' && SEED_NOTES.length > 0) {
+          STATE.notes = [...SEED_NOTES];
+          saveNotes();
+        }
+      }
     } catch (e) {
-      STATE.notes = [];
+      STATE.notes = typeof SEED_NOTES !== 'undefined' ? [...SEED_NOTES] : [];
+      saveNotes();
     }
   } else {
     // Check if user has legacy raw notepad text to migrate
@@ -1574,5 +1592,9 @@ function setupEventListeners() {
   setupRichTextEditor();
 }
 
-// Kickstart App on DOM Ready
-document.addEventListener('DOMContentLoaded', initApp);
+// Kickstart App on DOM Ready or immediately if document is already ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
