@@ -90,12 +90,14 @@
           <span class="tab-label">Index</span>
         </button>
 
-        <button type="button" class="nav-tab-btn active" data-view="topicsView" id="tabTopicsView" role="tab" title="Topics &amp; Tricks">
+        <button type="button" class="nav-tab-btn active" data-view="topicsView" id="tabTopicsView" role="tab"
+          title="Topics &amp; Tricks">
           <span class="tab-icon">📚</span>
           <span class="tab-label">Topics</span>
           <span class="tab-badge" id="activeTopicsBadge">0</span>
         </button>
-        <button type="button" class="nav-tab-btn" data-view="notepadView" id="tabNotepadView" role="tab" title="Notepad">
+        <button type="button" class="nav-tab-btn" data-view="notepadView" id="tabNotepadView" role="tab"
+          title="Notepad">
           <span class="tab-icon">📝</span>
           <span class="tab-label">Notes</span>
           <span class="tab-badge" id="notesCountBadge">0</span>
@@ -184,7 +186,7 @@
         <div class="notepad-container">
           <div class="notepad-header">
             <div class="notepad-title-group">
-              <h2><span>📝</span> General Revision Points &amp; Notepad</h2>
+              <h2><span>📝</span> General Points</h2>
             </div>
             <div class="notepad-actions">
               <button type="button" class="btn-primary" id="openAddNoteBtn" title="Create a new note">
@@ -406,6 +408,22 @@
             <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.75rem;">Select a previously downloaded
               NathKhat JSON file to restore.</p>
             <input type="file" id="importJsonInput" accept=".json" style="font-size: 0.85rem;">
+          </div>
+
+          <!-- Real-Time Cloud Sync (Multi-User Sharing) -->
+          <div
+            style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-card);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+              <h4 style="font-size: 0.95rem; color: var(--text-main); margin: 0;">🌐 Live Cloud Sync</h4>
+              <span id="syncStatusBadge" style="font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; background: rgba(16, 185, 129, 0.15); color: #10b981; font-weight: 700;">🟢 Online Sync Active</span>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 0.75rem;">
+              Syncs changes dynamically across all mobile phones &amp; computers in real time.
+            </p>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <input type="text" id="cloudDbUrlInput" class="form-input" style="flex: 1; min-width: 180px; font-size: 0.82rem;" placeholder="Firebase RTDB URL (optional custom)">
+              <button type="button" class="btn-primary" id="saveCloudSyncBtn" style="height: 36px; padding: 0 10px; font-size: 0.82rem; white-space: nowrap;">Connect</button>
+            </div>
           </div>
         </div>
       </div>

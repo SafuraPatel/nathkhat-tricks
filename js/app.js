@@ -153,6 +153,15 @@ function initApp() {
     applyTheme(STATE.theme);
     updateBadges();
 
+    // Prevent browser from jumping to top or erratic position on reload
+    if (window.history && 'scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+
+    // Initialize history navigation so Back button NEVER exits the site
+    initHistoryNavigation();
+    setupScrollPersistence();
+
     // Sync paper filter buttons with restored active paper
     [DOM.filterAll, DOM.filterP1, DOM.filterP2].forEach(btn => {
       if (btn && btn.getAttribute('data-paper') === STATE.activePaper) {
@@ -169,6 +178,12 @@ function initApp() {
 
     // Restore exact active section after refresh!
     switchView(STATE.activeView, false);
+
+    // Restore exact scroll position on refresh (stay on same spot, don't move)
+    restoreScrollPosition();
+
+    // Start Live Cloud Sync so changes are visible to all instantly
+    initCloudSync();
   } catch (err) {
     console.error('NathKhat initialization error:', err);
   }
@@ -539,14 +554,24 @@ function renderIndex() {
   });
 }
 
-function closeMobileIndex() {
+function closeMobileIndex(triggerHistoryBack = false) {
   if (DOM.indexSidebar) DOM.indexSidebar.classList.remove('mobile-open');
   if (DOM.sidebarBackdrop) DOM.sidebarBackdrop.classList.remove('active');
+
+  if (triggerHistoryBack && window.history && window.history.state && window.history.state.modalOpen) {
+    window.history.back();
+  }
 }
 
 function toggleMobileIndex() {
-  if (DOM.indexSidebar) DOM.indexSidebar.classList.toggle('mobile-open');
-  if (DOM.sidebarBackdrop) DOM.sidebarBackdrop.classList.toggle('active');
+  if (DOM.indexSidebar) {
+    const isOpening = !DOM.indexSidebar.classList.contains('mobile-open');
+    DOM.indexSidebar.classList.toggle('mobile-open');
+    if (DOM.sidebarBackdrop) DOM.sidebarBackdrop.classList.toggle('active');
+    if (isOpening) {
+      pushModalHistory('indexSidebar');
+    }
+  }
 }
 
 function jumpToTopic(topicId) {
@@ -696,6 +721,7 @@ function openAddTopicModal() {
   DOM.topicExplanationEditor.innerHTML = '';
   
   DOM.topicModal.classList.add('open');
+  pushModalHistory('topicModal');
   setTimeout(() => DOM.topicTitleInput.focus(), 100);
 }
 
@@ -713,11 +739,22 @@ function openEditTopicModal(topicId) {
   DOM.topicExplanationEditor.innerHTML = topic.explanation || '';
 
   DOM.topicModal.classList.add('open');
+  pushModalHistory('topicModal');
   setTimeout(() => DOM.topicTitleInput.focus(), 100);
 }
 
-function closeTopicModal() {
-  DOM.topicModal.classList.remove('open');
+function closeTopicModal(triggerHistoryBack = false) {
+  if (DOM.topicModal) {
+    DOM.topicModal.classList.remove('open');
+  }
+  STATE.editingTopicId = null;
+  if (DOM.topicTitleInput) DOM.topicTitleInput.value = '';
+  if (DOM.topicTrickInput) DOM.topicTrickInput.value = '';
+  if (DOM.topicExplanationEditor) DOM.topicExplanationEditor.innerHTML = '';
+
+  if (triggerHistoryBack && window.history && window.history.state && window.history.state.modalOpen) {
+    window.history.back();
+  }
 }
 
 function sanitizeHtml(rawHtml) {
@@ -769,6 +806,7 @@ function saveTopicForm() {
   }
 
   const now = Date.now();
+  let savedTopicItem = null;
 
   if (STATE.editingTopicId) {
     // Update existing topic
@@ -786,6 +824,7 @@ function saveTopicForm() {
       // Move edited topic to TOP of array as recently updated
       const updatedTopic = STATE.topics.splice(index, 1)[0];
       STATE.topics.unshift(updatedTopic);
+      savedTopicItem = updatedTopic;
     }
   } else {
     // ADD NEW TOPIC: Place at the VERY TOP of the array so it's top on Index!
@@ -801,16 +840,23 @@ function saveTopicForm() {
     };
 
     STATE.topics.unshift(newTopic); // Top of the list
+    savedTopicItem = newTopic;
   }
 
   saveTopics();
   updateBadges();
   renderIndex();
   renderTopics();
-  closeTopicModal();
 
-  // Scroll to top of topics
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  // CLOSE the add or edit section immediately!
+  closeTopicModal(false);
+
+  // Push to cloud sync so it is instantly visible to all other users
+  if (savedTopicItem && typeof SyncEngine !== 'undefined') {
+    SyncEngine.pushTopic(savedTopicItem);
+  }
+
+  // NOTE: Do not scroll away, stay on the exact same page position!
 }
 
 function duplicateTopic(topicId) {
@@ -1191,6 +1237,7 @@ function openAddNoteModal() {
   }
   DOM.noteModalTitle.innerHTML = '<span>📝</span> Add New Note';
   DOM.noteModal.classList.add('open');
+  pushModalHistory('noteModal');
   setTimeout(() => DOM.noteTitleInput.focus(), 100);
 }
 
@@ -1207,16 +1254,23 @@ function openEditNoteModal(noteId) {
   }
   DOM.noteModalTitle.innerHTML = '<span>✏️</span> Edit Note';
   DOM.noteModal.classList.add('open');
+  pushModalHistory('noteModal');
   setTimeout(() => DOM.noteTitleInput.focus(), 100);
 }
 
-function closeNoteModal() {
-  DOM.noteModal.classList.remove('open');
-  DOM.noteForm.reset();
+function closeNoteModal(triggerHistoryBack = false) {
+  if (DOM.noteModal) {
+    DOM.noteModal.classList.remove('open');
+  }
+  if (DOM.noteForm) DOM.noteForm.reset();
   if (DOM.noteExplanationEditor) {
     DOM.noteExplanationEditor.innerHTML = '';
   }
   STATE.editingNoteId = null;
+
+  if (triggerHistoryBack && window.history && window.history.state && window.history.state.modalOpen) {
+    window.history.back();
+  }
 }
 
 function saveNoteForm(e) {
@@ -1271,7 +1325,9 @@ function saveNoteForm(e) {
   saveNotes();
   updateBadges();
   renderNotes();
-  closeNoteModal();
+
+  // CLOSE the add/edit note section immediately!
+  closeNoteModal(false);
 }
 
 function deleteNote(noteId) {
@@ -1432,10 +1488,16 @@ function renderBin() {
 
 function openBackupModal() {
   DOM.backupModal.classList.add('open');
+  pushModalHistory('backupModal');
 }
 
-function closeBackupModal() {
-  DOM.backupModal.classList.remove('open');
+function closeBackupModal(triggerHistoryBack = false) {
+  if (DOM.backupModal) {
+    DOM.backupModal.classList.remove('open');
+  }
+  if (triggerHistoryBack && window.history && window.history.state && window.history.state.modalOpen) {
+    window.history.back();
+  }
 }
 
 function exportBackupJson() {
@@ -1635,6 +1697,152 @@ function setupEventListeners() {
     const hash = window.location.hash.replace('#', '');
     if (['topicsView', 'notepadView', 'binView'].includes(hash) && STATE.activeView !== hash) {
       switchView(hash, false);
+    }
+  });
+}
+
+/* ==========================================================================
+   History & Mobile Back-Button Management (Never throw user outside site)
+   ========================================================================== */
+
+function initHistoryNavigation() {
+  if (!window.history || !window.history.pushState) return;
+
+  // Set an anchor so pressing Back on the main page doesn't exit the site
+  if (!window.history.state || !window.history.state.app) {
+    window.history.replaceState({ app: 'nathkhat', root: true }, '');
+    window.history.pushState({ app: 'nathkhat', view: STATE.activeView }, '');
+  }
+
+  window.addEventListener('popstate', (e) => {
+    let handled = false;
+
+    // 1. If Add/Edit Topic modal is open -> close it!
+    if (DOM.topicModal && DOM.topicModal.classList.contains('open')) {
+      closeTopicModal(false);
+      handled = true;
+    }
+
+    // 2. If Add/Edit Note modal is open -> close it!
+    if (DOM.noteModal && DOM.noteModal.classList.contains('open')) {
+      closeNoteModal(false);
+      handled = true;
+    }
+
+    // 3. If Backup modal is open -> close it!
+    if (DOM.backupModal && DOM.backupModal.classList.contains('open')) {
+      closeBackupModal(false);
+      handled = true;
+    }
+
+    // 4. If Mobile Index drawer is open -> close it!
+    if (DOM.indexSidebar && DOM.indexSidebar.classList.contains('mobile-open')) {
+      closeMobileIndex(false);
+      handled = true;
+    }
+
+    if (handled) return;
+
+    // 5. If on secondary tab (Notepad, Bin) -> go back to Topics tab!
+    if (STATE.activeView !== 'topicsView') {
+      switchView('topicsView', false);
+      return;
+    }
+
+    // 6. If already on Topics view, prevent exiting by re-pushing app state
+    if (window.history && window.history.pushState) {
+      window.history.pushState({ app: 'nathkhat', view: 'topicsView' }, '');
+    }
+  });
+}
+
+function pushModalHistory(modalName) {
+  if (window.history && window.history.pushState) {
+    window.history.pushState({ modalOpen: true, modalName: modalName }, '');
+  }
+}
+
+/* ==========================================================================
+   Scroll Position Persistence (Stay on same page, don't move on refresh)
+   ========================================================================== */
+
+function setupScrollPersistence() {
+  let scrollTimeout = null;
+  window.addEventListener('scroll', () => {
+    if (scrollTimeout) clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      try {
+        sessionStorage.setItem('nathkhat_scroll_pos', window.scrollY);
+      } catch (e) {}
+    }, 120);
+  }, { passive: true });
+}
+
+function restoreScrollPosition() {
+  try {
+    const saved = sessionStorage.getItem('nathkhat_scroll_pos');
+    if (saved !== null) {
+      const y = parseInt(saved, 10);
+      if (!isNaN(y) && y > 0) {
+        requestAnimationFrame(() => {
+          window.scrollTo(0, y);
+          setTimeout(() => window.scrollTo(0, y), 80);
+        });
+      }
+    }
+  } catch (e) {}
+}
+
+/* ==========================================================================
+   Dynamic Cloud Synchronization (Visible to all users instantly)
+   ========================================================================== */
+
+function initCloudSync() {
+  if (typeof SyncEngine === 'undefined') return;
+
+  const cloudInput = document.getElementById('cloudDbUrlInput');
+  const saveCloudBtn = document.getElementById('saveCloudSyncBtn');
+
+  if (cloudInput) {
+    cloudInput.value = SyncEngine.getCloudUrl() || '';
+  }
+
+  if (saveCloudBtn && cloudInput) {
+    saveCloudBtn.addEventListener('click', async () => {
+      const url = cloudInput.value.trim();
+      SyncEngine.setCloudUrl(url);
+      const ok = await SyncEngine.testConnection();
+      if (ok) {
+        // Sync and push local topics to cloud so everyone gets them
+        SyncEngine.pushAllTopics(STATE.topics);
+        alert('Connected to Cloud Sync! Changes are now visible to all users.');
+      } else {
+        alert('Could not connect to that endpoint. Please check URL.');
+      }
+    });
+  }
+
+  // Start live sync and merge remote topics into local view
+  SyncEngine.startLiveSync((remoteTopics) => {
+    if (!Array.isArray(remoteTopics) || remoteTopics.length === 0) return;
+    let hasNew = false;
+    remoteTopics.forEach(remote => {
+      if (!remote || !remote.id) return;
+      const existingIdx = STATE.topics.findIndex(t => t.id === remote.id);
+      if (existingIdx === -1) {
+        STATE.topics.unshift(remote);
+        hasNew = true;
+      } else if (remote.updatedAt && remote.updatedAt > (STATE.topics[existingIdx].updatedAt || 0)) {
+        STATE.topics[existingIdx] = remote;
+        hasNew = true;
+      }
+    });
+
+    if (hasNew) {
+      saveTopics();
+      updateBadges();
+      renderIndex();
+      renderTopics();
     }
   });
 }
