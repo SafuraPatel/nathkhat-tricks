@@ -1,289 +1,333 @@
 /**
- * NathKhat - Cloud Synchronization Engine
- * Enables instant multi-user synchronization across devices and browsers.
- * Integrates with Firebase Realtime Database REST / SSE streaming and BroadcastChannel.
+ * NathKhat - Real-Time Multi-Device Synchronization Engine
+ * Powered by WebRTC (PeerJS) for instant mobile <-> laptop live sync,
+ * BroadcastChannel for zero-latency cross-tab sync, and optional Cloud DB REST.
  */
 
 const SyncEngine = (function() {
   const STORAGE_KEY_CLOUD_URL = 'nathkhat_cloud_url_v1';
-  // Default cloud database endpoint (Firebase Realtime Database REST API)
-  const DEFAULT_CLOUD_URL = 'https://nathkhat-sync-default-rtdb.firebaseio.com';
+  const DEFAULT_CLOUD_URL = '';
+  const ROOM_PREFIX = 'nathkhat-tricks-vault-v1';
+  const MAX_SLOTS = 4;
 
   let cloudUrl = localStorage.getItem(STORAGE_KEY_CLOUD_URL) || DEFAULT_CLOUD_URL;
   let broadcastChannel = null;
-  let isConnected = false;
+  let peerInstance = null;
+  let mySlot = null;
+  let activePeerConns = [];
   let pollInterval = null;
-  let liveTopicsCallback = null;
-  let liveNotesCallback = null;
+  let callbacks = {
+    getCurrentData: null,
+    onMergeData: null,
+    onTopicReceived: null,
+    onTopicDeleted: null,
+    onNoteReceived: null,
+    onNoteDeleted: null
+  };
 
+  // 1. Setup Cross-Tab BroadcastChannel
   try {
     if (window.BroadcastChannel) {
       broadcastChannel = new BroadcastChannel('nathkhat_tab_sync');
       broadcastChannel.onmessage = (event) => {
         if (!event.data) return;
         const { type, payload } = event.data;
-
-        if (type === 'SYNC_TOPIC' && payload && typeof liveTopicsCallback === 'function') {
-          liveTopicsCallback([payload]);
-        } else if (type === 'DELETE_TOPIC' && payload && typeof liveTopicsCallback === 'function') {
-          liveTopicsCallback([], payload);
-        } else if (type === 'SYNC_NOTE' && payload && typeof liveNotesCallback === 'function') {
-          liveNotesCallback([payload]);
-        } else if (type === 'DELETE_NOTE' && payload && typeof liveNotesCallback === 'function') {
-          liveNotesCallback([], payload);
-        }
+        handleIncomingMessage(type, payload);
       };
     }
   } catch (e) {
-    console.warn('BroadcastChannel not supported in this browser environment', e);
+    console.warn('BroadcastChannel not supported:', e);
   }
 
+  function handleIncomingMessage(type, payload) {
+    if (!type || !payload) return;
+    if (type === 'HANDSHAKE' && typeof callbacks.onMergeData === 'function') {
+      callbacks.onMergeData(payload);
+    } else if (type === 'TOPIC_SAVED' && typeof callbacks.onTopicReceived === 'function') {
+      callbacks.onTopicReceived(payload);
+    } else if (type === 'TOPIC_DELETED' && typeof callbacks.onTopicDeleted === 'function') {
+      callbacks.onTopicDeleted(payload);
+    } else if (type === 'NOTE_SAVED' && typeof callbacks.onNoteReceived === 'function') {
+      callbacks.onNoteReceived(payload);
+    } else if (type === 'NOTE_DELETED' && typeof callbacks.onNoteDeleted === 'function') {
+      callbacks.onNoteDeleted(payload);
+    }
+  }
+
+  // Update UI Pill Status
+  function updatePillStatus(state, text) {
+    const pill = document.getElementById('liveSyncPill');
+    const pillText = document.getElementById('liveSyncText');
+    const badge = document.getElementById('syncStatusBadge');
+
+    if (pill) {
+      pill.className = `live-sync-pill ${state}`;
+    }
+    if (pillText) {
+      pillText.textContent = text;
+    }
+    if (badge) {
+      if (state === 'connected') {
+        badge.textContent = `🟢 ${text}`;
+        badge.style.background = 'rgba(16, 185, 129, 0.15)';
+        badge.style.color = '#10b981';
+      } else {
+        badge.textContent = `🟡 ${text}`;
+        badge.style.background = 'rgba(245, 158, 11, 0.15)';
+        badge.style.color = '#f59e0b';
+      }
+    }
+  }
+
+  // 2. PeerJS WebRTC Multi-Device Sync Engine
+  function initPeerSync() {
+    if (typeof Peer === 'undefined') {
+      console.warn('PeerJS library not available, continuing with local & broadcast sync.');
+      updatePillStatus('connecting', 'Local Storage Ready');
+      return;
+    }
+
+    trySlot(1);
+  }
+
+  function trySlot(slotNum) {
+    if (slotNum > MAX_SLOTS) {
+      console.log('All primary peer slots occupied, running client listener.');
+      updatePillStatus('connecting', 'Waiting for peer...');
+      return;
+    }
+
+    const slotId = `${ROOM_PREFIX}-s${slotNum}`;
+    const p = new Peer(slotId, {
+      debug: 0,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' },
+          { urls: 'stun:stun2.l.google.com:19302' }
+        ]
+      }
+    });
+
+    p.on('open', (id) => {
+      mySlot = slotNum;
+      peerInstance = p;
+      console.log(`Registered PeerJS slot: ${slotId}`);
+      updatePillStatus('connecting', 'Live Sync: Ready');
+
+      // Listen for incoming connections
+      peerInstance.on('connection', (conn) => {
+        setupPeerConnection(conn);
+      });
+
+      // Connect to other slots
+      connectToOtherSlots();
+
+      // Periodically probe for new/reconnecting devices every 12 seconds
+      if (pollInterval) clearInterval(pollInterval);
+      pollInterval = setInterval(() => {
+        if (activePeerConns.length === 0) {
+          connectToOtherSlots();
+        }
+      }, 12000);
+    });
+
+    p.on('error', (err) => {
+      if (err.type === 'unavailable-id') {
+        // Slot is already claimed by another device (e.g. laptop), try next slot!
+        try { p.destroy(); } catch (e) {}
+        trySlot(slotNum + 1);
+      } else {
+        console.warn('PeerJS error:', err.type, err);
+      }
+    });
+  }
+
+  function connectToOtherSlots() {
+    if (!peerInstance || !mySlot) return;
+
+    for (let i = 1; i <= MAX_SLOTS; i++) {
+      if (i === mySlot) continue;
+      const targetId = `${ROOM_PREFIX}-s${i}`;
+      // Check if already connected
+      const exists = activePeerConns.some(c => c.peer === targetId);
+      if (exists) continue;
+
+      try {
+        const conn = peerInstance.connect(targetId, { reliable: true });
+        setupPeerConnection(conn);
+      } catch (e) {}
+    }
+  }
+
+  function setupPeerConnection(conn) {
+    if (!conn) return;
+
+    conn.on('open', () => {
+      console.log('Peer connected:', conn.peer);
+      if (!activePeerConns.includes(conn)) {
+        activePeerConns.push(conn);
+      }
+      updatePillStatus('connected', 'Live: Connected');
+
+      // Send local data to remote peer on connect
+      if (typeof callbacks.getCurrentData === 'function') {
+        const localData = callbacks.getCurrentData();
+        try {
+          conn.send({ type: 'HANDSHAKE', payload: localData });
+        } catch (e) {}
+      }
+    });
+
+    conn.on('data', (msg) => {
+      if (!msg || !msg.type) return;
+      handleIncomingMessage(msg.type, msg.payload);
+    });
+
+    conn.on('close', () => {
+      activePeerConns = activePeerConns.filter(c => c !== conn);
+      if (activePeerConns.length === 0) {
+        updatePillStatus('connecting', 'Waiting for device...');
+      } else {
+        updatePillStatus('connected', `Live: Connected (${activePeerConns.length})`);
+      }
+    });
+
+    conn.on('error', () => {
+      activePeerConns = activePeerConns.filter(c => c !== conn);
+    });
+  }
+
+  // 3. Broadcast to all active peer connections & local tabs
+  function broadcast(type, payload) {
+    // A. Send to all open WebRTC peers (mobile, laptop)
+    activePeerConns.forEach(conn => {
+      try {
+        if (conn && conn.open) {
+          conn.send({ type, payload });
+        }
+      } catch (e) {}
+    });
+
+    // B. Send to local browser tabs
+    if (broadcastChannel) {
+      try {
+        broadcastChannel.postMessage({ type, payload });
+      } catch (e) {}
+    }
+  }
+
+  function pushTopic(topic) {
+    if (!topic || !topic.id) return;
+    broadcast('TOPIC_SAVED', topic);
+    pushCloudTopic(topic);
+  }
+
+  function deleteTopic(topicId) {
+    if (!topicId) return;
+    broadcast('TOPIC_DELETED', topicId);
+    deleteCloudTopic(topicId);
+  }
+
+  function pushNote(note) {
+    if (!note || !note.id) return;
+    broadcast('NOTE_SAVED', note);
+    pushCloudNote(note);
+  }
+
+  function deleteNote(noteId) {
+    if (!noteId) return;
+    broadcast('NOTE_DELETED', noteId);
+    deleteCloudNote(noteId);
+  }
+
+  // 4. Cloud REST Engine (Optional fallback for Firebase / custom endpoint)
   function getCloudUrl() {
     return cloudUrl;
   }
 
   function setCloudUrl(url) {
-    if (!url || !url.trim()) {
-      cloudUrl = DEFAULT_CLOUD_URL;
-    } else {
-      cloudUrl = url.trim().replace(/\/+$/, '');
-    }
+    cloudUrl = url ? url.trim().replace(/\/+$/, '') : '';
     localStorage.setItem(STORAGE_KEY_CLOUD_URL, cloudUrl);
     testConnection();
   }
 
   async function testConnection() {
-    if (!cloudUrl) return false;
+    if (!cloudUrl) {
+      updatePillStatus('connecting', 'Live Sync Active');
+      return true;
+    }
     try {
-      const endpoint = `${cloudUrl}/health.json`;
-      const res = await fetch(endpoint, { method: 'GET', mode: 'cors' });
-      isConnected = res.ok || res.status === 404;
-      updateSyncBadge(isConnected);
-      return isConnected;
+      const res = await fetch(`${cloudUrl}/health.json`, { method: 'GET', mode: 'cors' });
+      const ok = res.ok || res.status === 404;
+      updatePillStatus(ok ? 'connected' : 'connecting', ok ? 'Cloud Sync Online' : 'Cloud Offline');
+      return ok;
     } catch (e) {
-      isConnected = false;
-      updateSyncBadge(false);
+      updatePillStatus('connecting', 'Cloud Offline');
       return false;
     }
   }
 
-  function updateSyncBadge(connected) {
-    const badge = document.getElementById('syncStatusBadge');
-    if (badge) {
-      if (connected) {
-        badge.textContent = '🟢 Online Sync Active';
-        badge.style.background = 'rgba(16, 185, 129, 0.15)';
-        badge.style.color = '#10b981';
-      } else {
-        badge.textContent = '⚪ Local Storage (Offline Ready)';
-        badge.style.background = 'rgba(148, 163, 184, 0.15)';
-        badge.style.color = '#94a3b8';
-      }
-    }
-  }
-
-  // Fetch all shared topics from cloud
-  async function fetchCloudTopics() {
-    if (!cloudUrl) return [];
+  async function pushCloudTopic(topic) {
+    if (!cloudUrl || !topic || !topic.id) return;
     try {
-      const endpoint = `${cloudUrl}/topics.json`;
-      const res = await fetch(endpoint, { method: 'GET', mode: 'cors' });
-      if (!res.ok) return [];
-      const data = await res.json();
-      if (!data) return [];
-
-      let list = [];
-      if (Array.isArray(data)) {
-        list = data.filter(Boolean);
-      } else if (typeof data === 'object') {
-        list = Object.keys(data).map(key => ({
-          ...data[key],
-          id: data[key].id || key
-        }));
-      }
-      isConnected = true;
-      updateSyncBadge(true);
-      return list;
-    } catch (e) {
-      isConnected = false;
-      updateSyncBadge(false);
-      return [];
-    }
-  }
-
-  // Push single topic to cloud and broadcast to other tabs
-  async function pushTopic(topic) {
-    if (!topic || !topic.id) return;
-
-    // 1. Broadcast to any other open tabs/windows immediately
-    if (broadcastChannel) {
-      try {
-        broadcastChannel.postMessage({ type: 'SYNC_TOPIC', payload: topic });
-      } catch (e) {}
-    }
-
-    // 2. Broadcast to cloud database
-    if (cloudUrl) {
-      try {
-        const endpoint = `${cloudUrl}/topics/${encodeURIComponent(topic.id)}.json`;
-        await fetch(endpoint, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(topic),
-          mode: 'cors'
-        });
-        isConnected = true;
-        updateSyncBadge(true);
-      } catch (e) {}
-    }
-  }
-
-  // Push full topic list to cloud
-  async function pushAllTopics(topicsList) {
-    if (!cloudUrl || !Array.isArray(topicsList)) return;
-    try {
-      const endpoint = `${cloudUrl}/topics.json`;
-      const payload = {};
-      topicsList.forEach(t => {
-        if (t && t.id) payload[t.id] = t;
-      });
-      await fetch(endpoint, {
+      await fetch(`${cloudUrl}/topics/${encodeURIComponent(topic.id)}.json`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(topic),
         mode: 'cors'
       });
-      isConnected = true;
-      updateSyncBadge(true);
     } catch (e) {}
   }
 
-  // Delete topic from cloud
-  async function deleteTopic(topicId) {
-    if (!topicId) return;
-
-    if (broadcastChannel) {
-      try {
-        broadcastChannel.postMessage({ type: 'DELETE_TOPIC', payload: topicId });
-      } catch (e) {}
-    }
-
-    if (cloudUrl) {
-      try {
-        const endpoint = `${cloudUrl}/topics/${encodeURIComponent(topicId)}.json`;
-        await fetch(endpoint, { method: 'DELETE', mode: 'cors' });
-      } catch (e) {}
-    }
-  }
-
-  // Notes synchronization
-  async function fetchCloudNotes() {
-    if (!cloudUrl) return [];
+  async function deleteCloudTopic(topicId) {
+    if (!cloudUrl || !topicId) return;
     try {
-      const endpoint = `${cloudUrl}/notes.json`;
-      const res = await fetch(endpoint, { method: 'GET', mode: 'cors' });
-      if (!res.ok) return [];
-      const data = await res.json();
-      if (!data) return [];
-
-      let list = [];
-      if (Array.isArray(data)) {
-        list = data.filter(Boolean);
-      } else if (typeof data === 'object') {
-        list = Object.keys(data).map(key => ({
-          ...data[key],
-          id: data[key].id || key
-        }));
-      }
-      return list;
-    } catch (e) {
-      return [];
-    }
+      await fetch(`${cloudUrl}/topics/${encodeURIComponent(topicId)}.json`, {
+        method: 'DELETE',
+        mode: 'cors'
+      });
+    } catch (e) {}
   }
 
-  async function pushNote(note) {
-    if (!note || !note.id) return;
-
-    if (broadcastChannel) {
-      try {
-        broadcastChannel.postMessage({ type: 'SYNC_NOTE', payload: note });
-      } catch (e) {}
-    }
-
-    if (cloudUrl) {
-      try {
-        const endpoint = `${cloudUrl}/notes/${encodeURIComponent(note.id)}.json`;
-        await fetch(endpoint, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(note),
-          mode: 'cors'
-        });
-      } catch (e) {}
-    }
+  async function pushCloudNote(note) {
+    if (!cloudUrl || !note || !note.id) return;
+    try {
+      await fetch(`${cloudUrl}/notes/${encodeURIComponent(note.id)}.json`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(note),
+        mode: 'cors'
+      });
+    } catch (e) {}
   }
 
-  async function deleteNote(noteId) {
-    if (!noteId) return;
-
-    if (broadcastChannel) {
-      try {
-        broadcastChannel.postMessage({ type: 'DELETE_NOTE', payload: noteId });
-      } catch (e) {}
-    }
-
-    if (cloudUrl) {
-      try {
-        const endpoint = `${cloudUrl}/notes/${encodeURIComponent(noteId)}.json`;
-        await fetch(endpoint, { method: 'DELETE', mode: 'cors' });
-      } catch (e) {}
-    }
+  async function deleteCloudNote(noteId) {
+    if (!cloudUrl || !noteId) return;
+    try {
+      await fetch(`${cloudUrl}/notes/${encodeURIComponent(noteId)}.json`, {
+        method: 'DELETE',
+        mode: 'cors'
+      });
+    } catch (e) {}
   }
 
-  // Initialize background live sync for topics
-  function startLiveSync(onUpdateCallback) {
-    liveTopicsCallback = onUpdateCallback;
+  // 5. Initialize Live Sync with App Callbacks
+  function startLiveSync(appCallbacks) {
+    callbacks = { ...callbacks, ...appCallbacks };
 
-    // Initial fetch
-    fetchCloudTopics().then(cloudList => {
-      if (cloudList && cloudList.length > 0 && typeof liveTopicsCallback === 'function') {
-        liveTopicsCallback(cloudList);
-      }
-    });
-
-    // Periodic live pull every 20 seconds
-    if (pollInterval) clearInterval(pollInterval);
-    pollInterval = setInterval(async () => {
-      const cloudList = await fetchCloudTopics();
-      if (cloudList && cloudList.length > 0 && typeof liveTopicsCallback === 'function') {
-        liveTopicsCallback(cloudList);
-      }
-    }, 20000);
-  }
-
-  // Initialize background live sync for notes
-  function startNoteLiveSync(onUpdateCallback) {
-    liveNotesCallback = onUpdateCallback;
-
-    fetchCloudNotes().then(cloudNotes => {
-      if (cloudNotes && cloudNotes.length > 0 && typeof liveNotesCallback === 'function') {
-        liveNotesCallback(cloudNotes);
-      }
-    });
+    // Start WebRTC peer discovery & sync
+    initPeerSync();
   }
 
   return {
     getCloudUrl,
     setCloudUrl,
     testConnection,
-    fetchCloudTopics,
     pushTopic,
-    pushAllTopics,
     deleteTopic,
-    fetchCloudNotes,
     pushNote,
     deleteNote,
-    startLiveSync,
-    startNoteLiveSync
+    startLiveSync
   };
 })();

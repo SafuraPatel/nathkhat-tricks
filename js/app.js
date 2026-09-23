@@ -1680,6 +1680,93 @@ function setupEventListeners() {
   if (DOM.exportJsonBtn) DOM.exportJsonBtn.addEventListener('click', exportBackupJson);
   if (DOM.importJsonInput) DOM.importJsonInput.addEventListener('change', importBackupJson);
 
+  // Live Sync Pill
+  const liveSyncPill = document.getElementById('liveSyncPill');
+  if (liveSyncPill) {
+    liveSyncPill.addEventListener('click', openBackupModal);
+  }
+
+  // 1-Tap Clipboard Data Transfer
+  const copyClipboardDataBtn = document.getElementById('copyClipboardDataBtn');
+  const pasteClipboardDataBtn = document.getElementById('pasteClipboardDataBtn');
+
+  if (copyClipboardDataBtn) {
+    copyClipboardDataBtn.addEventListener('click', () => {
+      const exportData = {
+        app: 'NathKhat',
+        version: '2.7',
+        topics: STATE.topics,
+        notes: STATE.notes,
+        bin: STATE.bin
+      };
+      const text = JSON.stringify(exportData, null, 2);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          showToast('Copied all data to clipboard! Paste it on your other device.', 'success');
+        }).catch(() => {
+          fallbackCopyText(text);
+        });
+      } else {
+        fallbackCopyText(text);
+      }
+    });
+  }
+
+  if (pasteClipboardDataBtn) {
+    pasteClipboardDataBtn.addEventListener('click', async () => {
+      let text = '';
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        try {
+          text = await navigator.clipboard.readText();
+        } catch (e) {}
+      }
+      if (!text || !text.includes('topics')) {
+        text = prompt('Paste your NathKhat JSON data here:');
+      }
+      if (!text) return;
+
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed && (Array.isArray(parsed.topics) || Array.isArray(parsed.notes))) {
+          if (Array.isArray(parsed.topics)) {
+            parsed.topics.forEach(rt => {
+              if (!rt || !rt.id) return;
+              const idx = STATE.topics.findIndex(t => t.id === rt.id);
+              if (idx === -1) {
+                STATE.topics.unshift(rt);
+              } else if ((rt.updatedAt || 0) > (STATE.topics[idx].updatedAt || 0)) {
+                STATE.topics[idx] = rt;
+              }
+            });
+            saveTopics();
+          }
+          if (Array.isArray(parsed.notes)) {
+            parsed.notes.forEach(rn => {
+              if (!rn || !rn.id) return;
+              const idx = STATE.notes.findIndex(n => n.id === rn.id);
+              if (idx === -1) {
+                STATE.notes.unshift(rn);
+              } else if ((rn.updatedAt || 0) > (STATE.notes[idx].updatedAt || 0)) {
+                STATE.notes[idx] = rn;
+              }
+            });
+            saveNotes();
+          }
+          updateBadges();
+          renderIndex();
+          renderTopics();
+          renderNotes();
+          closeBackupModal();
+          showToast('Data merged successfully!', 'success');
+        } else {
+          showToast('Invalid JSON data format.', 'error');
+        }
+      } catch (err) {
+        showToast('Error parsing clipboard data.', 'error');
+      }
+    });
+  }
+
   // Mobile Sidebar Toggle & Close (with touch support)
   if (DOM.mobileIndexToggleBtn) {
     DOM.mobileIndexToggleBtn.addEventListener('click', toggleMobileIndex);
@@ -1869,10 +1956,68 @@ function initCloudSync() {
     }
   });
 
-  // Start live sync and merge remote topics into local view
-  SyncEngine.startLiveSync((remoteTopics, deletedTopicId) => {
-    if (deletedTopicId) {
-      const idx = STATE.topics.findIndex(t => t.id === deletedTopicId);
+  // Start live WebRTC peer-to-peer sync and merge remote data
+  SyncEngine.startLiveSync({
+    getCurrentData: () => ({
+      topics: STATE.topics,
+      notes: STATE.notes,
+      bin: STATE.bin
+    }),
+    onMergeData: (remote) => {
+      if (!remote) return;
+      let changed = false;
+      if (Array.isArray(remote.topics)) {
+        remote.topics.forEach(rt => {
+          if (!rt || !rt.id) return;
+          const idx = STATE.topics.findIndex(t => t.id === rt.id);
+          if (idx === -1) {
+            STATE.topics.unshift(rt);
+            changed = true;
+          } else if ((rt.updatedAt || 0) > (STATE.topics[idx].updatedAt || 0)) {
+            STATE.topics[idx] = rt;
+            changed = true;
+          }
+        });
+      }
+      if (Array.isArray(remote.notes)) {
+        remote.notes.forEach(rn => {
+          if (!rn || !rn.id) return;
+          const idx = STATE.notes.findIndex(n => n.id === rn.id);
+          if (idx === -1) {
+            STATE.notes.unshift(rn);
+            changed = true;
+          } else if ((rn.updatedAt || 0) > (STATE.notes[idx].updatedAt || 0)) {
+            STATE.notes[idx] = rn;
+            changed = true;
+          }
+        });
+      }
+      if (changed) {
+        saveTopics();
+        saveNotes();
+        updateBadges();
+        renderIndex();
+        renderTopics();
+        renderNotes();
+        showToast('Live Synced with connected device!', 'success');
+      }
+    },
+    onTopicReceived: (topic) => {
+      if (!topic || !topic.id) return;
+      const idx = STATE.topics.findIndex(t => t.id === topic.id);
+      if (idx === -1) {
+        STATE.topics.unshift(topic);
+      } else {
+        STATE.topics[idx] = topic;
+      }
+      saveTopics();
+      updateBadges();
+      renderIndex();
+      renderTopics();
+      showToast(`Live received: "${topic.title}"`, 'success');
+    },
+    onTopicDeleted: (topicId) => {
+      const idx = STATE.topics.findIndex(t => t.id === topicId);
       if (idx !== -1) {
         STATE.topics.splice(idx, 1);
         saveTopics();
@@ -1880,66 +2025,30 @@ function initCloudSync() {
         renderIndex();
         renderTopics();
       }
-      return;
-    }
-
-    if (!Array.isArray(remoteTopics) || remoteTopics.length === 0) return;
-    let hasNew = false;
-    remoteTopics.forEach(remote => {
-      if (!remote || !remote.id) return;
-      const existingIdx = STATE.topics.findIndex(t => t.id === remote.id);
-      if (existingIdx === -1) {
-        STATE.topics.unshift(remote);
-        hasNew = true;
-      } else if (remote.updatedAt && remote.updatedAt > (STATE.topics[existingIdx].updatedAt || 0)) {
-        STATE.topics[existingIdx] = remote;
-        hasNew = true;
+    },
+    onNoteReceived: (note) => {
+      if (!note || !note.id) return;
+      const idx = STATE.notes.findIndex(n => n.id === note.id);
+      if (idx === -1) {
+        STATE.notes.unshift(note);
+      } else {
+        STATE.notes[idx] = note;
       }
-    });
-
-    if (hasNew) {
-      saveTopics();
+      saveNotes();
       updateBadges();
-      renderIndex();
-      renderTopics();
-    }
-  });
-
-  // Start live sync for notes
-  if (SyncEngine.startNoteLiveSync) {
-    SyncEngine.startNoteLiveSync((remoteNotes, deletedNoteId) => {
-      if (deletedNoteId) {
-        const idx = STATE.notes.findIndex(n => n.id === deletedNoteId);
-        if (idx !== -1) {
-          STATE.notes.splice(idx, 1);
-          saveNotes();
-          updateBadges();
-          renderNotes();
-        }
-        return;
-      }
-
-      if (!Array.isArray(remoteNotes) || remoteNotes.length === 0) return;
-      let hasNew = false;
-      remoteNotes.forEach(remote => {
-        if (!remote || !remote.id) return;
-        const existingIdx = STATE.notes.findIndex(n => n.id === remote.id);
-        if (existingIdx === -1) {
-          STATE.notes.unshift(remote);
-          hasNew = true;
-        } else if (remote.updatedAt && remote.updatedAt > (STATE.notes[existingIdx].updatedAt || 0)) {
-          STATE.notes[existingIdx] = remote;
-          hasNew = true;
-        }
-      });
-
-      if (hasNew) {
+      renderNotes();
+      showToast(`Live note: "${note.title}"`, 'success');
+    },
+    onNoteDeleted: (noteId) => {
+      const idx = STATE.notes.findIndex(n => n.id === noteId);
+      if (idx !== -1) {
+        STATE.notes.splice(idx, 1);
         saveNotes();
         updateBadges();
         renderNotes();
       }
-    });
-  }
+    }
+  });
 }
 
 // Kickstart App on DOM Ready or immediately if document is already ready
