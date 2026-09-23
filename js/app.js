@@ -26,7 +26,9 @@ const STORAGE_KEYS = {
   BIN: 'nathkhat_bin_v1',
   NOTES: 'nathkhat_notes_v1',
   NOTEPAD: 'nathkhat_notepad_v1',
-  THEME: 'nathkhat_theme_v1'
+  THEME: 'nathkhat_theme_v1',
+  ACTIVE_VIEW: 'nathkhat_active_view_v1',
+  ACTIVE_PAPER: 'nathkhat_active_paper_v1'
 };
 
 // DOM Elements
@@ -150,10 +152,23 @@ function initApp() {
     setupEventListeners();
     applyTheme(STATE.theme);
     updateBadges();
+
+    // Sync paper filter buttons with restored active paper
+    [DOM.filterAll, DOM.filterP1, DOM.filterP2].forEach(btn => {
+      if (btn && btn.getAttribute('data-paper') === STATE.activePaper) {
+        btn.classList.add('active');
+      } else if (btn) {
+        btn.classList.remove('active');
+      }
+    });
+
     renderIndex();
     renderTopics();
     renderNotepad();
     renderBin();
+
+    // Restore exact active section after refresh!
+    switchView(STATE.activeView, false);
   } catch (err) {
     console.error('NathKhat initialization error:', err);
   }
@@ -166,6 +181,22 @@ function loadStoredData() {
     STATE.theme = savedTheme;
   } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
     STATE.theme = 'light';
+  }
+
+  // Load Active View & Filter across refreshes
+  const hash = window.location.hash ? window.location.hash.replace('#', '') : '';
+  const savedView = localStorage.getItem(STORAGE_KEYS.ACTIVE_VIEW);
+  const validViews = ['topicsView', 'notepadView', 'binView'];
+
+  if (validViews.includes(hash)) {
+    STATE.activeView = hash;
+  } else if (savedView && validViews.includes(savedView)) {
+    STATE.activeView = savedView;
+  }
+
+  const savedPaper = localStorage.getItem(STORAGE_KEYS.ACTIVE_PAPER);
+  if (savedPaper && ['ALL', 'P1', 'P2'].includes(savedPaper)) {
+    STATE.activePaper = savedPaper;
   }
 
   // Load Topics
@@ -299,23 +330,28 @@ function showToast(message, type = 'info', duration = 3000) {
    Section & Tab Switching
    ========================================================================== */
 
-function switchView(viewName) {
+function switchView(viewName, updateUrl = true) {
   STATE.activeView = viewName;
+  localStorage.setItem(STORAGE_KEYS.ACTIVE_VIEW, viewName);
+
+  if (updateUrl && window.history && window.history.replaceState) {
+    window.history.replaceState(null, '', '#' + viewName);
+  }
 
   // Update tabs
   [DOM.tabTopicsView, DOM.tabNotepadView, DOM.tabBinView].forEach(btn => {
-    if (btn.getAttribute('data-view') === viewName) {
+    if (btn && btn.getAttribute('data-view') === viewName) {
       btn.classList.add('active');
-    } else {
+    } else if (btn) {
       btn.classList.remove('active');
     }
   });
 
   // Update Views
   [DOM.topicsView, DOM.notepadView, DOM.binView].forEach(view => {
-    if (view.id === viewName) {
+    if (view && view.id === viewName) {
       view.classList.add('active');
-    } else {
+    } else if (view) {
       view.classList.remove('active');
     }
   });
@@ -336,11 +372,12 @@ function switchView(viewName) {
 
 function setPaperFilter(paper) {
   STATE.activePaper = paper;
+  localStorage.setItem(STORAGE_KEYS.ACTIVE_PAPER, paper);
 
   [DOM.filterAll, DOM.filterP1, DOM.filterP2].forEach(btn => {
-    if (btn.getAttribute('data-paper') === paper) {
+    if (btn && btn.getAttribute('data-paper') === paper) {
       btn.classList.add('active');
-    } else {
+    } else if (btn) {
       btn.classList.remove('active');
     }
   });
@@ -1592,6 +1629,14 @@ function setupEventListeners() {
 
   // Setup WYSIWYG
   setupRichTextEditor();
+
+  // Listen for browser back/forward or hash changes to sync view
+  window.addEventListener('hashchange', () => {
+    const hash = window.location.hash.replace('#', '');
+    if (['topicsView', 'notepadView', 'binView'].includes(hash) && STATE.activeView !== hash) {
+      switchView(hash, false);
+    }
+  });
 }
 
 // Kickstart App on DOM Ready or immediately if document is already ready
