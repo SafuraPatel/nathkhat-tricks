@@ -2496,3 +2496,585 @@ html, body {
     max-width: 1080px;
   }
 }
+
+/* ==========================================================================
+   Image Cropper & Zoom System (Rich Interactive Editor & Viewer)
+   ========================================================================== */
+
+.image-cropper-overlay {
+  z-index: 4000 !important;
+  backdrop-filter: blur(8px);
+}
+
+.cropper-modal-box {
+  max-width: 880px;
+  width: 95vw;
+  max-height: 94vh;
+}
+
+.cropper-modal-body {
+  padding: 1.25rem 1.6rem;
+  overflow-y: auto;
+}
+
+.cropper-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  font-weight: 500;
+  margin-top: 2px;
+  display: block;
+}
+
+/* Cropper Interactive Stage */
+.cropper-stage {
+  position: relative;
+  width: 100%;
+  height: 420px;
+  background-color: #0b0f19;
+  background-image: 
+    linear-gradient(45deg, #151d30 25%, transparent 25%), 
+    linear-gradient(-45deg, #151d30 25%, transparent 25%), 
+    linear-gradient(45deg, transparent 75%, #151d30 75%), 
+    linear-gradient(-45deg, transparent 75%, #151d30 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border-card);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  cursor: grab;
+}
+
+.cropper-stage:active {
+  cursor: grabbing;
+}
+
+.cropper-canvas-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  will-change: transform;
+  transform-origin: center center;
+  transition: transform 0.05s linear;
+}
+
+.cropper-canvas-wrap img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+/* Movable Crop Selection Box */
+.cropper-box {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px dashed #6366f1;
+  /* Dimmed outer mask */
+  box-shadow: 0 0 0 9999px rgba(10, 15, 29, 0.75);
+  cursor: move;
+  touch-action: none;
+}
+
+.cropper-box:hover {
+  border-color: #818cf8;
+}
+
+/* Rule of Thirds Grid */
+.cropper-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.grid-line-h, .grid-line-v {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.grid-line-h {
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+
+.grid-line-h.h1 { top: 33.33%; }
+.grid-line-h.h2 { top: 66.66%; }
+
+.grid-line-v {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.grid-line-v.v1 { left: 33.33%; }
+.grid-line-v.v2 { left: 66.66%; }
+
+/* Real-time Dimensions Badge */
+.cropper-dims-badge {
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.92);
+  color: #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* 8 Resize Handles */
+.cropper-handle {
+  position: absolute;
+  box-sizing: border-box;
+  z-index: 10;
+}
+
+/* Touch hit-area expansion */
+.cropper-handle::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
+}
+
+/* Corner handles */
+.handle-nw, .handle-ne, .handle-sw, .handle-se {
+  width: 12px;
+  height: 12px;
+  background: #6366f1;
+  border: 2px solid #ffffff;
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.8);
+}
+
+.handle-nw { top: -6px; left: -6px; cursor: nwse-resize; }
+.handle-ne { top: -6px; right: -6px; cursor: nesw-resize; }
+.handle-sw { bottom: -6px; left: -6px; cursor: nesw-resize; }
+.handle-se { bottom: -6px; right: -6px; cursor: nwse-resize; }
+
+/* Edge handles */
+.handle-n, .handle-s {
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 6px;
+  background: #6366f1;
+  border: 1px solid #ffffff;
+  border-radius: 3px;
+  cursor: ns-resize;
+}
+.handle-n { top: -3px; }
+.handle-s { bottom: -3px; }
+
+.handle-e, .handle-w {
+  top: 50%;
+  transform: translateY(-50%);
+  width: 6px;
+  height: 18px;
+  background: #6366f1;
+  border: 1px solid #ffffff;
+  border-radius: 3px;
+  cursor: ew-resize;
+}
+.handle-e { right: -3px; }
+.handle-w { left: -3px; }
+
+/* Cropper Controls Panel */
+.cropper-controls-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.cropper-control-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.cropper-tools-split {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.control-label-group {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 65px;
+}
+
+.control-label-text {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.cropper-zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex: 1;
+}
+
+.cropper-slider {
+  flex: 1;
+  min-width: 120px;
+  height: 6px;
+  accent-color: var(--primary);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cropper-zoom-val {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--primary);
+  font-weight: 800;
+  min-width: 44px;
+  text-align: right;
+}
+
+.btn-cropper-icon {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-card);
+  color: var(--text-main);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: var(--transition);
+}
+
+.btn-cropper-icon:hover {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.btn-cropper-chip {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-card);
+  color: var(--text-main);
+  padding: 0 10px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-cropper-chip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.cropper-group {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.cropper-ratio-group, .cropper-transform-group {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.btn-ratio {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-card);
+  color: var(--text-muted);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-ratio:hover {
+  color: var(--text-main);
+  border-color: var(--primary);
+}
+
+.btn-ratio.active {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+}
+
+/* Cropper Footer */
+.cropper-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.cropper-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* In-Editor Selected Image State */
+.selected-editor-img {
+  outline: 3px solid var(--primary) !important;
+  outline-offset: 4px;
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.4) !important;
+  border-radius: var(--radius-sm);
+}
+
+/* Floating In-Editor Image Bubble */
+.editor-img-bubble {
+  position: fixed;
+  z-index: 3800;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  border-radius: 999px;
+  padding: 4px 8px;
+  display: none;
+  align-items: center;
+  gap: 4px;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.editor-img-bubble.visible {
+  display: flex;
+}
+
+.bubble-btn {
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.bubble-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.bubble-btn-danger:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.bubble-sep {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0 2px;
+}
+
+/* Content Zoomable Image */
+.content-zoomable-img {
+  cursor: zoom-in;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+
+.content-zoomable-img:hover {
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.25) !important;
+}
+
+/* Drag over active border */
+.drag-over-active {
+  outline: 2.5px dashed var(--primary) !important;
+  background: rgba(99, 102, 241, 0.08) !important;
+}
+
+/* ==========================================================================
+   Fullscreen Lightbox Modal (Diagram & Formula Inspection)
+   ========================================================================== */
+
+.image-lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  background: rgba(5, 8, 15, 0.94);
+  backdrop-filter: blur(14px);
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  visibility: hidden;
+  transition: var(--transition);
+}
+
+.image-lightbox-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.lightbox-header-bar {
+  padding: 0.85rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.6);
+  z-index: 10;
+}
+
+.lightbox-title {
+  color: #f1f5f9;
+  font-size: 0.95rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.lightbox-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-lightbox-icon {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: var(--transition);
+}
+
+.btn-lightbox-icon:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.lightbox-zoom-level {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--primary-light, #818cf8);
+  font-weight: 800;
+  min-width: 46px;
+  text-align: center;
+}
+
+.btn-lightbox-close {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.1rem;
+  margin-left: 0.5rem;
+  transition: var(--transition);
+}
+
+.btn-lightbox-close:hover {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.lightbox-stage {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  user-select: none;
+  cursor: grab;
+}
+
+.lightbox-stage:active {
+  cursor: grabbing;
+}
+
+.lightbox-stage img {
+  max-width: 90vw;
+  max-height: 85vh;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+  transform-origin: center center;
+  will-change: transform;
+  transition: transform 0.05s linear;
+}
+
+.lightbox-hint {
+  text-align: center;
+  padding: 0.5rem;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  background: rgba(15, 23, 42, 0.6);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Light theme adaptations for Cropper */
+[data-theme="light"] .cropper-stage {
+  background-color: #f1f5f9;
+  background-image: 
+    linear-gradient(45deg, #e2e8f0 25%, transparent 25%), 
+    linear-gradient(-45deg, #e2e8f0 25%, transparent 25%), 
+    linear-gradient(45deg, transparent 75%, #e2e8f0 75%), 
+    linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+}
+
+[data-theme="light"] .cropper-box {
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.55);
+}
+
+@media (max-width: 768px) {
+  .cropper-stage {
+    height: 300px;
+  }
+
+  .cropper-modal-box {
+    width: 98vw;
+    max-height: 96vh;
+  }
+
+  .cropper-tools-split {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+}

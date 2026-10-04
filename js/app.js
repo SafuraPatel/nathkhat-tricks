@@ -943,35 +943,37 @@ function setupSingleEditor(config) {
     });
   }
 
-  // Image File Picker -> Base64 inline insertion
+  // Fast Image File Picker -> Opens Crop & Zoom Tool
   if (imageFileInput) {
     imageFileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          document.execCommand('insertImage', false, event.target.result);
-          showToast('Image inserted successfully!', 'success');
-        };
-        reader.readAsDataURL(file);
+      const file = e.target.files && e.target.files[0];
+      if (file && file.type.startsWith('image/')) {
+        if (typeof ImageCropper !== 'undefined' && ImageCropper.openCropper) {
+          ImageCropper.openCropper(file, editor);
+        }
       }
+      e.target.value = '';
     });
   }
 
-  // Direct Clipboard Paste Listener (Ctrl+V screenshots / images)
+  // Direct Clipboard Paste Listener (Ctrl+V screenshots / images -> Fast Crop & Zoom)
   editor.addEventListener('paste', (e) => {
-    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    const clipboardData = e.clipboardData || window.clipboardData;
+    if (!clipboardData) return;
+    const items = clipboardData.items;
+    if (!items) return;
+
     for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf('image') !== -1) {
+      if (items[i].type && items[i].type.startsWith('image/')) {
         const blob = items[i].getAsFile();
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          document.execCommand('insertImage', false, event.target.result);
-          showToast('Pasted image from clipboard!', 'success');
-        };
-        reader.readAsDataURL(blob);
-        e.preventDefault();
-        break;
+        if (blob) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof ImageCropper !== 'undefined' && ImageCropper.openCropper) {
+            ImageCropper.openCropper(blob, editor);
+          }
+          break;
+        }
       }
     }
   });

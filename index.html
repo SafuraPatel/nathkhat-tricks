@@ -16,7 +16,7 @@
     rel="stylesheet">
 
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/style.css?v=2.7">
+  <link rel="stylesheet" href="css/style.css?v=3.0">
 </head>
 
 <body>
@@ -549,13 +549,152 @@
     </div>
   </div>
 
+  <!-- MODAL: Image Crop & Zoom Tool -->
+  <div class="modal-overlay image-cropper-overlay" id="imageCropperModal" role="dialog" aria-modal="true" aria-labelledby="cropperModalTitle">
+    <div class="modal-box cropper-modal-box">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <h3 class="modal-title" id="cropperModalTitle">
+            <span>✂️</span> Crop &amp; Zoom Image
+          </h3>
+          <span class="cropper-subtitle">Instant preview, zoom, pan, rotate &amp; custom crop</span>
+        </div>
+        <button type="button" class="btn-modal-close" id="closeCropperModalBtn" aria-label="Close cropper">✕</button>
+      </div>
+
+      <div class="modal-body cropper-modal-body">
+        <!-- Interactive Cropper Stage -->
+        <div class="cropper-stage" id="cropperStage">
+          <!-- Transformed Canvas Wrap -->
+          <div class="cropper-canvas-wrap" id="cropperCanvasWrap">
+            <img id="cropperSourceImg" src="" alt="Cropper Preview" draggable="false" />
+          </div>
+
+          <!-- Crop Selection Box -->
+          <div class="cropper-box" id="cropperBox">
+            <!-- Rule-of-thirds grid -->
+            <div class="cropper-grid">
+              <span class="grid-line-h h1"></span>
+              <span class="grid-line-h h2"></span>
+              <span class="grid-line-v v1"></span>
+              <span class="grid-line-v v2"></span>
+            </div>
+            <!-- Dimension Badge -->
+            <div class="cropper-dims-badge" id="cropperDimsBadge">0 × 0 px</div>
+            <!-- Resize Handles (8 points) -->
+            <div class="cropper-handle handle-nw" data-handle="nw"></div>
+            <div class="cropper-handle handle-ne" data-handle="ne"></div>
+            <div class="cropper-handle handle-sw" data-handle="sw"></div>
+            <div class="cropper-handle handle-se" data-handle="se"></div>
+            <div class="cropper-handle handle-n" data-handle="n"></div>
+            <div class="cropper-handle handle-s" data-handle="s"></div>
+            <div class="cropper-handle handle-e" data-handle="e"></div>
+            <div class="cropper-handle handle-w" data-handle="w"></div>
+          </div>
+        </div>
+
+        <!-- Cropper Interactive Controls Panel -->
+        <div class="cropper-controls-panel">
+          <!-- Row 1: Zoom Slider & Controls -->
+          <div class="cropper-control-row">
+            <div class="control-label-group">
+              <span class="control-label-icon">🔍</span>
+              <span class="control-label-text">Zoom:</span>
+            </div>
+            <div class="cropper-zoom-controls">
+              <button type="button" class="btn-cropper-icon" id="cropperZoomOutBtn" title="Zoom Out (10%)">➖</button>
+              <input type="range" id="cropperZoomSlider" min="20" max="400" value="100" class="cropper-slider" />
+              <button type="button" class="btn-cropper-icon" id="cropperZoomInBtn" title="Zoom In (10%)">➕</button>
+              <button type="button" class="btn-cropper-chip" id="cropperZoomFitBtn" title="Reset Zoom to Fit">⟲ Fit</button>
+              <span class="cropper-zoom-val" id="cropperZoomVal">100%</span>
+            </div>
+          </div>
+
+          <!-- Row 2: Aspect Ratio Presets & Transforms -->
+          <div class="cropper-control-row cropper-tools-split">
+            <!-- Aspect Ratio Selector -->
+            <div class="cropper-group">
+              <span class="control-label-text">Ratio:</span>
+              <div class="cropper-ratio-group" id="cropperRatioGroup">
+                <button type="button" class="btn-ratio active" data-ratio="free">Free</button>
+                <button type="button" class="btn-ratio" data-ratio="1:1">1:1</button>
+                <button type="button" class="btn-ratio" data-ratio="4:3">4:3</button>
+                <button type="button" class="btn-ratio" data-ratio="16:9">16:9</button>
+                <button type="button" class="btn-ratio" data-ratio="original">Original</button>
+              </div>
+            </div>
+
+            <!-- Rotate & Flip Buttons -->
+            <div class="cropper-group">
+              <span class="control-label-text">Transform:</span>
+              <div class="cropper-transform-group">
+                <button type="button" class="btn-cropper-icon" id="cropperRotateLeftBtn" title="Rotate Left 90°">↺</button>
+                <button type="button" class="btn-cropper-icon" id="cropperRotateRightBtn" title="Rotate Right 90°">↻</button>
+                <button type="button" class="btn-cropper-icon" id="cropperFlipHBtn" title="Flip Horizontal">⇆</button>
+                <button type="button" class="btn-cropper-icon" id="cropperFlipVBtn" title="Flip Vertical">⇅</button>
+                <button type="button" class="btn-cropper-icon" id="cropperResetBtn" title="Reset Transforms">🔄</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer cropper-modal-footer">
+        <div class="cropper-footer-left">
+          <button type="button" class="btn-secondary" id="cropperSkipBtn" title="Insert without cropping">
+            ⚡ Skip Crop (Fast Insert)
+          </button>
+        </div>
+        <div class="cropper-footer-right">
+          <button type="button" class="btn-secondary" id="cancelCropperBtn">Cancel</button>
+          <button type="button" class="btn-primary" id="applyCropBtn">
+            <span>✂️</span> Apply &amp; Insert
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIGHTBOX: Fullscreen Image Zoom Viewer (for rendered Topic and Note cards) -->
+  <div class="image-lightbox-overlay" id="imageLightboxModal" role="dialog" aria-modal="true" aria-label="Image Zoom Inspection">
+    <div class="lightbox-header-bar">
+      <div class="lightbox-title">
+        <span>🔍</span> Diagram &amp; Image Inspection
+      </div>
+      <div class="lightbox-actions">
+        <button type="button" class="btn-lightbox-icon" id="lightboxZoomOutBtn" title="Zoom Out">➖</button>
+        <span class="lightbox-zoom-level" id="lightboxZoomLevel">100%</span>
+        <button type="button" class="btn-lightbox-icon" id="lightboxZoomInBtn" title="Zoom In">➕</button>
+        <button type="button" class="btn-lightbox-icon" id="lightboxResetBtn" title="Reset Zoom">⟲</button>
+        <button type="button" class="btn-lightbox-icon" id="lightboxDownloadBtn" title="Download Image">💾</button>
+        <button type="button" class="btn-lightbox-close" id="closeLightboxBtn" title="Close Lightbox (Esc)">✕</button>
+      </div>
+    </div>
+    <div class="lightbox-stage" id="lightboxStage">
+      <img id="lightboxImg" src="" alt="Fullscreen inspection" draggable="false" />
+    </div>
+    <div class="lightbox-hint">💡 Scroll mouse wheel or pinch to zoom. Drag to pan.</div>
+  </div>
+
+  <!-- Floating Editor Image Toolbar -->
+  <div class="editor-img-bubble" id="editorImgBubble">
+    <button type="button" class="bubble-btn" id="bubbleCropBtn" title="Crop &amp; Zoom this image">✂️ Crop &amp; Zoom</button>
+    <span class="bubble-sep"></span>
+    <button type="button" class="bubble-btn" data-size="100" title="Full Width (100%)">100%</button>
+    <button type="button" class="bubble-btn" data-size="75" title="Three Quarter Width (75%)">75%</button>
+    <button type="button" class="bubble-btn" data-size="50" title="Half Width (50%)">50%</button>
+    <span class="bubble-sep"></span>
+    <button type="button" class="bubble-btn bubble-btn-danger" id="bubbleDeleteBtn" title="Delete image">🗑️</button>
+  </div>
+
   <!-- Toast Container -->
   <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
   <!-- Application Logic Scripts -->
-  <script src="js/seed-data.js?v=2.9"></script>
-  <script src="js/sync-engine.js?v=2.9"></script>
-  <script src="js/app.js?v=2.9"></script>
+  <script src="js/seed-data.js?v=3.0"></script>
+  <script src="js/sync-engine.js?v=3.0"></script>
+  <script src="js/image-cropper.js?v=3.0"></script>
+  <script src="js/app.js?v=3.0"></script>
 </body>
 
 </html>
