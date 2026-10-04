@@ -16,7 +16,7 @@
     rel="stylesheet">
 
   <!-- Main Stylesheet -->
-  <link rel="stylesheet" href="css/style.css?v=3.0">
+  <link rel="stylesheet" href="css/style.css?v=3.1">
 </head>
 
 <body>
@@ -303,7 +303,7 @@
             </label>
 
             <div class="editor-container">
-              <!-- Rich-Text Toolbar: B, U, H2, H3, P, A, HL, • List, 1. List, 🖼️, 📊 Table, ➕ Row, ➕ Col -->
+              <!-- Rich-Text Toolbar: B, U, H2, P, A, HL, • List, 1. List, 🖼️, ✂️ Clip, 📊 Table, ➕ Row, ➕ Col -->
               <div class="editor-toolbar" id="editorToolbar">
                 <button type="button" class="editor-btn" data-command="bold"
                   title="Bold (Ctrl+B)"><strong>B</strong></button>
@@ -314,8 +314,6 @@
 
                 <button type="button" class="editor-btn" data-command="formatBlock" data-val="h2"
                   title="Heading 2">H2</button>
-                <button type="button" class="editor-btn" data-command="formatBlock" data-val="h3"
-                  title="Heading 3">H3</button>
                 <button type="button" class="editor-btn" data-command="formatBlock" data-val="p"
                   title="Paragraph">P</button>
 
@@ -353,6 +351,12 @@
                   <span>🖼️</span>
                   <input type="file" id="imageFileInput" accept="image/*" style="display: none;">
                 </label>
+
+                <!-- Screen Clipping Button (✂️ Screen Clip like MS Word) -->
+                <button type="button" class="editor-btn btn-screen-clip" id="screenClipBtn"
+                  title="Screen Clipping like MS Word (Capture any window, screen or paste clipboard snipping tool)">
+                  <span>✂️ Clip</span>
+                </button>
 
                 <!-- Table Creation Button (📊 Table) -->
                 <button type="button" class="editor-btn" id="insertTableBtn"
@@ -480,8 +484,6 @@
 
                 <button type="button" class="editor-btn" data-command="formatBlock" data-val="h2"
                   title="Heading 2">H2</button>
-                <button type="button" class="editor-btn" data-command="formatBlock" data-val="h3"
-                  title="Heading 3">H3</button>
                 <button type="button" class="editor-btn" data-command="formatBlock" data-val="p"
                   title="Paragraph">P</button>
 
@@ -520,6 +522,12 @@
                   <input type="file" id="noteImageFileInput" accept="image/*" style="display: none;">
                 </label>
 
+                <!-- Screen Clipping Button (✂️ Screen Clip like MS Word) -->
+                <button type="button" class="editor-btn btn-screen-clip" id="noteScreenClipBtn"
+                  title="Screen Clipping like MS Word (Capture any window, screen or paste clipboard snipping tool)">
+                  <span>✂️ Clip</span>
+                </button>
+
                 <!-- Table Creation Button (📊 Table, ➕ Row, ➕ Col) -->
                 <button type="button" class="editor-btn" id="noteInsertTableBtn"
                   title="Create / Insert Table with attractive header and smooth colors">📊 Table</button>
@@ -549,15 +557,15 @@
     </div>
   </div>
 
-  <!-- MODAL: Image Crop & Zoom Tool -->
+  <!-- MODAL: Image Studio - Crop, Color & Edit Tool -->
   <div class="modal-overlay image-cropper-overlay" id="imageCropperModal" role="dialog" aria-modal="true" aria-labelledby="cropperModalTitle">
     <div class="modal-box cropper-modal-box">
       <div class="modal-header">
         <div class="modal-title-group">
           <h3 class="modal-title" id="cropperModalTitle">
-            <span>✂️</span> Crop &amp; Zoom Image
+            <span>🎨</span> Image Studio: Edit, Color &amp; Crop
           </h3>
-          <span class="cropper-subtitle">Instant preview, zoom, pan, rotate &amp; custom crop</span>
+          <span class="cropper-subtitle">Zoom, Pan, Recolor, Color Filters, Markups &amp; Custom Crop</span>
         </div>
         <button type="button" class="btn-modal-close" id="closeCropperModalBtn" aria-label="Close cropper">✕</button>
       </div>
@@ -565,9 +573,11 @@
       <div class="modal-body cropper-modal-body">
         <!-- Interactive Cropper Stage -->
         <div class="cropper-stage" id="cropperStage">
-          <!-- Transformed Canvas Wrap -->
+          <!-- Transformed Canvas Wrap (holds image, live tint & drawing markup) -->
           <div class="cropper-canvas-wrap" id="cropperCanvasWrap">
             <img id="cropperSourceImg" src="" alt="Cropper Preview" draggable="false" />
+            <canvas id="cropperDrawCanvas" class="cropper-draw-canvas"></canvas>
+            <div id="cropperColorOverlay" class="cropper-color-overlay"></div>
           </div>
 
           <!-- Crop Selection Box -->
@@ -593,46 +603,165 @@
           </div>
         </div>
 
+        <!-- Mode Switcher Tabs: Crop, Color, Draw -->
+        <div class="cropper-tab-nav" id="cropperTabNav" role="tablist">
+          <button type="button" class="cropper-tab-btn active" data-tab="crop">✂️ Crop &amp; Transform</button>
+          <button type="button" class="cropper-tab-btn" data-tab="color">🎨 Color &amp; Recolor</button>
+          <button type="button" class="cropper-tab-btn" data-tab="draw">✏️ Draw &amp; Markup</button>
+        </div>
+
         <!-- Cropper Interactive Controls Panel -->
         <div class="cropper-controls-panel">
-          <!-- Row 1: Zoom Slider & Controls -->
-          <div class="cropper-control-row">
+          <!-- Always-available Zoom Bar (Smooth Slider, Wheel & Pinch - NO +/- buttons) -->
+          <div class="cropper-control-row cropper-zoom-bar">
             <div class="control-label-group">
               <span class="control-label-icon">🔍</span>
               <span class="control-label-text">Zoom:</span>
             </div>
             <div class="cropper-zoom-controls">
-              <button type="button" class="btn-cropper-icon" id="cropperZoomOutBtn" title="Zoom Out (10%)">➖</button>
-              <input type="range" id="cropperZoomSlider" min="20" max="400" value="100" class="cropper-slider" />
-              <button type="button" class="btn-cropper-icon" id="cropperZoomInBtn" title="Zoom In (10%)">➕</button>
-              <button type="button" class="btn-cropper-chip" id="cropperZoomFitBtn" title="Reset Zoom to Fit">⟲ Fit</button>
+              <input type="range" id="cropperZoomSlider" min="20" max="400" value="100" class="cropper-slider" title="Smooth zoom slider (or scroll mouse wheel / pinch)" />
+              <button type="button" class="btn-cropper-chip" id="cropperZoomFitBtn" title="Reset Zoom to Fit (100%)">⟲ Fit</button>
               <span class="cropper-zoom-val" id="cropperZoomVal">100%</span>
             </div>
           </div>
 
-          <!-- Row 2: Aspect Ratio Presets & Transforms -->
-          <div class="cropper-control-row cropper-tools-split">
-            <!-- Aspect Ratio Selector -->
-            <div class="cropper-group">
-              <span class="control-label-text">Ratio:</span>
-              <div class="cropper-ratio-group" id="cropperRatioGroup">
-                <button type="button" class="btn-ratio active" data-ratio="free">Free</button>
-                <button type="button" class="btn-ratio" data-ratio="1:1">1:1</button>
-                <button type="button" class="btn-ratio" data-ratio="4:3">4:3</button>
-                <button type="button" class="btn-ratio" data-ratio="16:9">16:9</button>
-                <button type="button" class="btn-ratio" data-ratio="original">Original</button>
+          <!-- TAB PANEL 1: Crop & Transform -->
+          <div class="cropper-tab-panel active" id="tabPanelCrop">
+            <div class="cropper-control-row cropper-tools-split">
+              <!-- Aspect Ratio Selector -->
+              <div class="cropper-group">
+                <span class="control-label-text">Ratio:</span>
+                <div class="cropper-ratio-group" id="cropperRatioGroup">
+                  <button type="button" class="btn-ratio active" data-ratio="free">Free</button>
+                  <button type="button" class="btn-ratio" data-ratio="1:1">1:1</button>
+                  <button type="button" class="btn-ratio" data-ratio="4:3">4:3</button>
+                  <button type="button" class="btn-ratio" data-ratio="16:9">16:9</button>
+                  <button type="button" class="btn-ratio" data-ratio="original">Original</button>
+                </div>
+              </div>
+
+              <!-- Rotate & Flip Buttons -->
+              <div class="cropper-group">
+                <span class="control-label-text">Transform:</span>
+                <div class="cropper-transform-group">
+                  <button type="button" class="btn-cropper-icon" id="cropperRotateLeftBtn" title="Rotate Left 90°">↺</button>
+                  <button type="button" class="btn-cropper-icon" id="cropperRotateRightBtn" title="Rotate Right 90°">↻</button>
+                  <button type="button" class="btn-cropper-icon" id="cropperFlipHBtn" title="Flip Horizontal">⇆</button>
+                  <button type="button" class="btn-cropper-icon" id="cropperFlipVBtn" title="Flip Vertical">⇅</button>
+                  <button type="button" class="btn-cropper-icon" id="cropperResetBtn" title="Reset Transforms">🔄</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB PANEL 2: Color, Recolor & Filters -->
+          <div class="cropper-tab-panel" id="tabPanelColor" style="display: none;">
+            <!-- Filter Presets (Word-like Picture Color) -->
+            <div class="cropper-control-row">
+              <span class="control-label-text">Color Mode:</span>
+              <div class="cropper-filter-presets" id="cropperFilterPresets">
+                <button type="button" class="btn-ratio active" data-preset="normal">Normal</button>
+                <button type="button" class="btn-ratio" data-preset="grayscale">B&amp;W Grayscale</button>
+                <button type="button" class="btn-ratio" data-preset="sepia">Sepia</button>
+                <button type="button" class="btn-ratio" data-preset="invert">Invert / Dark</button>
+                <button type="button" class="btn-ratio" data-preset="high-contrast">High Contrast</button>
+                <button type="button" class="btn-ratio" data-preset="warm">Warm</button>
+                <button type="button" class="btn-ratio" data-preset="cool">Cool</button>
               </div>
             </div>
 
-            <!-- Rotate & Flip Buttons -->
-            <div class="cropper-group">
-              <span class="control-label-text">Transform:</span>
-              <div class="cropper-transform-group">
-                <button type="button" class="btn-cropper-icon" id="cropperRotateLeftBtn" title="Rotate Left 90°">↺</button>
-                <button type="button" class="btn-cropper-icon" id="cropperRotateRightBtn" title="Rotate Right 90°">↻</button>
-                <button type="button" class="btn-cropper-icon" id="cropperFlipHBtn" title="Flip Horizontal">⇆</button>
-                <button type="button" class="btn-cropper-icon" id="cropperFlipVBtn" title="Flip Vertical">⇅</button>
-                <button type="button" class="btn-cropper-icon" id="cropperResetBtn" title="Reset Transforms">🔄</button>
+            <!-- Recolor Wash / Tint with Color Picker -->
+            <div class="cropper-control-row recolor-row">
+              <span class="control-label-text">Recolor Tint:</span>
+              <div class="recolor-swatches" id="recolorSwatches">
+                <button type="button" class="swatch-btn active" data-tint="none" title="No Tint">✕</button>
+                <button type="button" class="swatch-btn" data-tint="#3b82f6" style="background:#3b82f6;" title="Blue Tint"></button>
+                <button type="button" class="swatch-btn" data-tint="#ef4444" style="background:#ef4444;" title="Red Tint"></button>
+                <button type="button" class="swatch-btn" data-tint="#10b981" style="background:#10b981;" title="Green Tint"></button>
+                <button type="button" class="swatch-btn" data-tint="#8b5cf6" style="background:#8b5cf6;" title="Purple Tint"></button>
+                <button type="button" class="swatch-btn" data-tint="#f59e0b" style="background:#f59e0b;" title="Amber Tint"></button>
+                <button type="button" class="swatch-btn" data-tint="#ec4899" style="background:#ec4899;" title="Rose Tint"></button>
+                <button type="button" class="swatch-btn" data-tint="#06b6d4" style="background:#06b6d4;" title="Cyan Tint"></button>
+                <label class="swatch-custom-label" title="Custom Color Tint">
+                  <span>🎨</span>
+                  <input type="color" id="cropperColorTintPicker" value="#3b82f6" class="color-picker-input" style="display:none;" />
+                </label>
+              </div>
+              <div class="tint-slider-group">
+                <span class="slider-subtext">Intensity:</span>
+                <input type="range" id="cropperTintIntensity" min="10" max="90" value="45" class="cropper-mini-slider" title="Tint intensity" />
+              </div>
+            </div>
+
+            <!-- Fine Color Tuning Sliders -->
+            <div class="cropper-control-row color-sliders-grid">
+              <div class="color-slider-item">
+                <span class="slider-subtext">Brightness:</span>
+                <input type="range" id="cropperBrightness" min="50" max="170" value="100" class="cropper-mini-slider" />
+                <span class="slider-val" id="valBrightness">100%</span>
+              </div>
+              <div class="color-slider-item">
+                <span class="slider-subtext">Contrast:</span>
+                <input type="range" id="cropperContrast" min="50" max="200" value="100" class="cropper-mini-slider" />
+                <span class="slider-val" id="valContrast">100%</span>
+              </div>
+              <div class="color-slider-item">
+                <span class="slider-subtext">Saturation:</span>
+                <input type="range" id="cropperSaturate" min="0" max="250" value="100" class="cropper-mini-slider" />
+                <span class="slider-val" id="valSaturate">100%</span>
+              </div>
+              <div class="color-slider-item">
+                <span class="slider-subtext">Hue:</span>
+                <input type="range" id="cropperHue" min="0" max="360" value="0" class="cropper-mini-slider" />
+                <span class="slider-val" id="valHue">0°</span>
+              </div>
+              <button type="button" class="btn-cropper-chip" id="cropperResetColorsBtn" title="Reset all color adjustments">⟲ Reset Colors</button>
+            </div>
+          </div>
+
+          <!-- TAB PANEL 3: Draw & Markup with Colors -->
+          <div class="cropper-tab-panel" id="tabPanelDraw" style="display: none;">
+            <div class="cropper-control-row cropper-draw-toolbar">
+              <!-- Tools -->
+              <div class="draw-tools-group" id="drawToolsGroup">
+                <button type="button" class="btn-draw-tool active" data-tool="pen" title="Pen (Draw lines)">✏️ Pen</button>
+                <button type="button" class="btn-draw-tool" data-tool="highlighter" title="Highlighter (Semi-transparent)">🖍️ Highlighter</button>
+                <button type="button" class="btn-draw-tool" data-tool="arrow" title="Draw Arrow">➡️ Arrow</button>
+                <button type="button" class="btn-draw-tool" data-tool="rect" title="Draw Rectangle Box">⬜ Box</button>
+                <button type="button" class="btn-draw-tool" data-tool="text" title="Add Text Label">🔤 Text</button>
+              </div>
+
+              <!-- Color Palette for Drawing -->
+              <div class="draw-colors-group" id="drawColorsGroup">
+                <span class="control-label-text">Color:</span>
+                <button type="button" class="swatch-btn active" data-color="#ef4444" style="background:#ef4444;" title="Red"></button>
+                <button type="button" class="swatch-btn" data-color="#facc15" style="background:#facc15;" title="Yellow"></button>
+                <button type="button" class="swatch-btn" data-color="#22c55e" style="background:#22c55e;" title="Green"></button>
+                <button type="button" class="swatch-btn" data-color="#3b82f6" style="background:#3b82f6;" title="Blue"></button>
+                <button type="button" class="swatch-btn" data-color="#a855f7" style="background:#a855f7;" title="Purple"></button>
+                <button type="button" class="swatch-btn" data-color="#0f172a" style="background:#0f172a;" title="Black"></button>
+                <button type="button" class="swatch-btn" data-color="#ffffff" style="background:#ffffff; border:1px solid #94a3b8;" title="White"></button>
+                <label class="swatch-custom-label" title="Pick Custom Markup Color">
+                  <span>🎨</span>
+                  <input type="color" id="cropperDrawColorPicker" value="#ef4444" class="color-picker-input" style="display:none;" />
+                </label>
+              </div>
+
+              <!-- Stroke Size -->
+              <div class="draw-size-group">
+                <span class="control-label-text">Size:</span>
+                <select id="cropperDrawSize" class="form-select mini-select">
+                  <option value="2">Fine (2px)</option>
+                  <option value="4" selected>Medium (4px)</option>
+                  <option value="8">Thick (8px)</option>
+                  <option value="16">Broad (16px)</option>
+                </select>
+              </div>
+
+              <!-- Undo & Clear -->
+              <div class="draw-actions-group">
+                <button type="button" class="btn-cropper-chip" id="cropperUndoDrawBtn" title="Undo last stroke">↩️ Undo</button>
+                <button type="button" class="btn-cropper-chip" id="cropperClearDrawBtn" title="Clear all annotations">🗑️ Clear</button>
               </div>
             </div>
           </div>
@@ -662,10 +791,9 @@
         <span>🔍</span> Diagram &amp; Image Inspection
       </div>
       <div class="lightbox-actions">
-        <button type="button" class="btn-lightbox-icon" id="lightboxZoomOutBtn" title="Zoom Out">➖</button>
+        <!-- Smooth Zoom Display (NO +/- buttons) -->
         <span class="lightbox-zoom-level" id="lightboxZoomLevel">100%</span>
-        <button type="button" class="btn-lightbox-icon" id="lightboxZoomInBtn" title="Zoom In">➕</button>
-        <button type="button" class="btn-lightbox-icon" id="lightboxResetBtn" title="Reset Zoom">⟲</button>
+        <button type="button" class="btn-lightbox-icon" id="lightboxResetBtn" title="Reset Zoom to Fit">⟲ Fit</button>
         <button type="button" class="btn-lightbox-icon" id="lightboxDownloadBtn" title="Download Image">💾</button>
         <button type="button" class="btn-lightbox-close" id="closeLightboxBtn" title="Close Lightbox (Esc)">✕</button>
       </div>
@@ -676,9 +804,55 @@
     <div class="lightbox-hint">💡 Scroll mouse wheel or pinch to zoom. Drag to pan.</div>
   </div>
 
+  <!-- MODAL: Screen Clipping & Screenshot Helper (Like MS Word) -->
+  <div class="modal-overlay" id="screenClipModal" role="dialog" aria-modal="true" aria-labelledby="screenClipModalTitle">
+    <div class="modal-box screen-clip-modal-box">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <h3 class="modal-title" id="screenClipModalTitle">
+            <span>✂️</span> Screen Clipping (Like MS Word)
+          </h3>
+          <span class="cropper-subtitle">Capture any window, full screen or paste from Windows Snipping Tool</span>
+        </div>
+        <button type="button" class="btn-modal-close" id="closeScreenClipModalBtn" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body screen-clip-modal-body">
+        <div class="screen-clip-options">
+          <button type="button" class="clip-option-card" id="startLiveCaptureBtn">
+            <div class="clip-option-icon">🖥️</div>
+            <div class="clip-option-content">
+              <strong>Capture Screen or Window</strong>
+              <span>Select any open window, monitor or browser tab to clip</span>
+            </div>
+          </button>
+
+          <button type="button" class="clip-option-card" id="pasteFromClipboardBtn">
+            <div class="clip-option-icon">📋</div>
+            <div class="clip-option-content">
+              <strong>Paste Clipboard Snip (Win + Shift + S)</strong>
+              <span>Paste snapshot taken with Windows Snipping Tool or Print Screen</span>
+            </div>
+          </button>
+        </div>
+
+        <!-- Interactive Paste Drop Area -->
+        <div class="screen-clip-drop-zone" id="screenClipDropZone">
+          <div class="drop-zone-icon">✂️</div>
+          <div class="drop-zone-text">
+            <strong>Press <kbd>Ctrl</kbd> + <kbd>V</kbd> anywhere or paste here</strong>
+            <span>You can also take a screenshot with <kbd>Win</kbd> + <kbd>Shift</kbd> + <kbd>S</kbd> then paste</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="cancelScreenClipBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Floating Editor Image Toolbar -->
   <div class="editor-img-bubble" id="editorImgBubble">
-    <button type="button" class="bubble-btn" id="bubbleCropBtn" title="Crop &amp; Zoom this image">✂️ Crop &amp; Zoom</button>
+    <button type="button" class="bubble-btn" id="bubbleCropBtn" title="Edit, recolor, draw &amp; crop this image">🎨 Edit Image</button>
     <span class="bubble-sep"></span>
     <button type="button" class="bubble-btn" data-size="100" title="Full Width (100%)">100%</button>
     <button type="button" class="bubble-btn" data-size="75" title="Three Quarter Width (75%)">75%</button>
@@ -691,10 +865,10 @@
   <div class="toast-container" id="toastContainer" aria-live="polite"></div>
 
   <!-- Application Logic Scripts -->
-  <script src="js/seed-data.js?v=3.0"></script>
-  <script src="js/sync-engine.js?v=3.0"></script>
-  <script src="js/image-cropper.js?v=3.0"></script>
-  <script src="js/app.js?v=3.0"></script>
+  <script src="js/seed-data.js?v=3.1"></script>
+  <script src="js/sync-engine.js?v=3.1"></script>
+  <script src="js/image-cropper.js?v=3.1"></script>
+  <script src="js/app.js?v=3.1"></script>
 </body>
 
 </html>

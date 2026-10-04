@@ -102,6 +102,7 @@ const DOM = {
   noteForeColorPicker: document.getElementById('noteForeColorPicker'),
   noteHiliteColorPicker: document.getElementById('noteHiliteColorPicker'),
   noteImageFileInput: document.getElementById('noteImageFileInput'),
+  noteScreenClipBtn: document.getElementById('noteScreenClipBtn'),
   noteInsertTableBtn: document.getElementById('noteInsertTableBtn'),
   noteAddRowBtn: document.getElementById('noteAddRowBtn'),
   noteAddColBtn: document.getElementById('noteAddColBtn'),
@@ -128,6 +129,7 @@ const DOM = {
   foreColorPicker: document.getElementById('foreColorPicker'),
   hiliteColorPicker: document.getElementById('hiliteColorPicker'),
   imageFileInput: document.getElementById('imageFileInput'),
+  screenClipBtn: document.getElementById('screenClipBtn'),
   insertTableBtn: document.getElementById('insertTableBtn'),
   addRowBtn: document.getElementById('addRowBtn'),
   addColBtn: document.getElementById('addColBtn'),
@@ -890,6 +892,7 @@ function setupRichTextEditor() {
     foreColorPicker: DOM.foreColorPicker,
     hiliteColorPicker: DOM.hiliteColorPicker,
     imageFileInput: DOM.imageFileInput,
+    screenClipBtn: DOM.screenClipBtn,
     insertTableBtn: DOM.insertTableBtn,
     addRowBtn: DOM.addRowBtn,
     addColBtn: DOM.addColBtn
@@ -903,6 +906,7 @@ function setupRichTextEditor() {
       foreColorPicker: DOM.noteForeColorPicker,
       hiliteColorPicker: DOM.noteHiliteColorPicker,
       imageFileInput: DOM.noteImageFileInput,
+      screenClipBtn: DOM.noteScreenClipBtn,
       insertTableBtn: DOM.noteInsertTableBtn,
       addRowBtn: DOM.noteAddRowBtn,
       addColBtn: DOM.noteAddColBtn
@@ -911,10 +915,10 @@ function setupRichTextEditor() {
 }
 
 function setupSingleEditor(config) {
-  const { toolbar, editor, foreColorPicker, hiliteColorPicker, imageFileInput, insertTableBtn, addRowBtn, addColBtn } = config;
+  const { toolbar, editor, foreColorPicker, hiliteColorPicker, imageFileInput, screenClipBtn, insertTableBtn, addRowBtn, addColBtn } = config;
   if (!editor) return;
 
-  // Toolbar basic command execution (B, U, H2, H3, P, lists)
+  // Toolbar basic command execution (B, U, H2, P, lists)
   if (toolbar) {
     toolbar.querySelectorAll('.editor-btn[data-command]').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -953,6 +957,16 @@ function setupSingleEditor(config) {
         }
       }
       e.target.value = '';
+    });
+  }
+
+  // Screen Clipping Button (✂️ Screen Clip like MS Word)
+  if (screenClipBtn) {
+    screenClipBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (typeof ImageCropper !== 'undefined' && ImageCropper.startScreenClipping) {
+        ImageCropper.startScreenClipping(editor);
+      }
     });
   }
 

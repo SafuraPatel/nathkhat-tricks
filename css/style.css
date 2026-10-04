@@ -2569,6 +2569,29 @@ html, body {
   pointer-events: none;
 }
 
+.cropper-draw-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.cropper-color-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  mix-blend-mode: color;
+  display: none;
+  z-index: 1;
+  transition: opacity 0.1s ease;
+}
+
 /* Movable Crop Selection Box */
 .cropper-box {
   position: absolute;
@@ -2826,6 +2849,332 @@ html, body {
   color: #ffffff;
   border-color: var(--primary);
   box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+}
+
+/* Screen Clip Toolbar Button */
+.btn-screen-clip {
+  background: rgba(99, 102, 241, 0.12) !important;
+  color: var(--primary) !important;
+  border: 1px solid rgba(99, 102, 241, 0.35) !important;
+  font-weight: 700 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.btn-screen-clip:hover {
+  background: var(--primary) !important;
+  color: #ffffff !important;
+  border-color: var(--primary) !important;
+}
+
+/* Image Studio Mode Tabs */
+.cropper-tab-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-surface);
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-card);
+  margin-top: 0.85rem;
+}
+
+.cropper-tab-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  padding: 7px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: center;
+}
+
+.cropper-tab-btn:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.cropper-tab-btn.active {
+  background: var(--primary);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+}
+
+/* Zoom Row */
+.cropper-zoom-bar {
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-card);
+  margin-bottom: 0.5rem;
+}
+
+/* Color & Recolor Panel */
+.cropper-filter-presets {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.recolor-row {
+  justify-content: space-between;
+}
+
+.recolor-swatches {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.swatch-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  color: #ffffff;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+  background: var(--bg-surface);
+}
+
+.swatch-btn:hover {
+  transform: scale(1.15);
+}
+
+.swatch-btn.active {
+  border-color: #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+  transform: scale(1.15);
+}
+
+.swatch-custom-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px dashed var(--text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: transform 0.15s ease;
+}
+
+.swatch-custom-label:hover {
+  transform: scale(1.15);
+  border-color: var(--primary);
+}
+
+.tint-slider-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 140px;
+}
+
+.color-sliders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.color-slider-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-surface);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-card);
+}
+
+.slider-subtext {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  min-width: 58px;
+}
+
+.slider-val {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--primary-light, #818cf8);
+  min-width: 36px;
+  text-align: right;
+}
+
+.cropper-mini-slider {
+  flex: 1;
+  height: 4px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+/* Draw & Markup Toolbar */
+.cropper-draw-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.draw-tools-group, .draw-colors-group, .draw-size-group, .draw-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.btn-draw-tool {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-card);
+  color: var(--text-muted);
+  padding: 5px 9px;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-draw-tool:hover {
+  color: var(--text-main);
+  border-color: var(--primary);
+}
+
+.btn-draw-tool.active {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
+}
+
+.mini-select {
+  padding: 3px 6px;
+  font-size: 0.78rem;
+  height: 28px;
+  width: auto;
+}
+
+/* Screen Clip Modal Styles */
+.screen-clip-modal-box {
+  max-width: 560px;
+  width: 92vw;
+}
+
+.screen-clip-modal-body {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.screen-clip-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.clip-option-card {
+  background: var(--bg-surface);
+  border: 1.5px solid var(--border-card);
+  border-radius: var(--radius-md);
+  padding: 1.2rem 1rem;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.clip-option-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.clip-option-icon {
+  font-size: 1.8rem;
+}
+
+.clip-option-content strong {
+  display: block;
+  font-size: 0.92rem;
+  color: var(--text-main);
+  margin-bottom: 3px;
+}
+
+.clip-option-content span {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+  display: block;
+}
+
+.screen-clip-drop-zone {
+  border: 2px dashed rgba(99, 102, 241, 0.35);
+  background: rgba(99, 102, 241, 0.03);
+  border-radius: var(--radius-md);
+  padding: 1.25rem 1rem;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  transition: var(--transition);
+}
+
+.screen-clip-drop-zone.drag-over-active {
+  border-color: var(--primary);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.drop-zone-icon {
+  font-size: 1.6rem;
+}
+
+.drop-zone-text strong {
+  display: block;
+  font-size: 0.88rem;
+  color: var(--text-main);
+}
+
+.drop-zone-text span {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 2px;
+}
+
+.drop-zone-text kbd {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--primary);
+}
+
+@media (max-width: 600px) {
+  .screen-clip-options {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Cropper Footer */
