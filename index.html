@@ -98,9 +98,9 @@
           <span class="tab-badge" id="notesCountBadge">0</span>
         </button>
         <button type="button" class="nav-tab-btn" data-view="resourcesView" id="tabResourcesView" role="tab"
-          title="Resources (PDFs, Images, Documents, Files)">
+          title="Files (Google Drive Study Vault)">
           <span class="tab-icon">📁</span>
-          <span class="tab-label">Resources</span>
+          <span class="tab-label">Files</span>
           <span class="tab-badge" id="resourcesCountBadge">0</span>
         </button>
         <button type="button" class="nav-tab-btn" data-view="binView" id="tabBinView" role="tab" title="Recycle Bin">
@@ -221,115 +221,281 @@
         </div>
       </section>
 
-      <!-- SECTION: Study Resources & Files (PDFs, Images, Documents, Any Files) -->
+      <!-- SECTION: Study Resources & Files (Google Drive Files Tab) -->
       <section class="section-view" id="resourcesView" role="tabpanel">
-        <div class="resources-container">
-          <!-- Resources Top Header & Toolbar -->
-          <div class="resources-toolbar">
-            <div class="resources-title-group">
-              <h2><span>📁</span> Study Resources &amp; Files</h2>
-              <p>Store, preview &amp; download PDFs, question papers, diagrams, cheat sheets and any study files</p>
+        <div class="gdrive-app-wrapper">
+          <!-- Google Drive Left Navigation Sidebar -->
+          <aside class="gdrive-sidebar" id="gdriveSidebar">
+            <!-- Google Drive Brand Header -->
+            <div class="gdrive-sidebar-brand">
+              <svg class="gdrive-logo-svg" viewBox="0 0 87.3 78" width="34" height="30" aria-hidden="true">
+                <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
+                <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
+                <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
+                <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
+                <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
+                <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+              </svg>
+              <span class="gdrive-brand-text">Drive</span>
             </div>
-            <div class="resources-actions">
-              <input type="file" id="batchResourceFileInput" multiple style="display: none;" accept="*/*">
-              <button type="button" class="btn-primary" id="openUploadResourceBtn" title="Upload a new resource file">
-                <span>➕</span>
-                <span>Upload File</span>
+
+            <!-- Google Drive Iconic "+ New" Button & Dropdown Menu -->
+            <div class="gdrive-new-wrapper">
+              <button type="button" class="btn-gdrive-new-google" id="gdriveNewBtn" aria-expanded="false" aria-haspopup="true" title="Add or create in Drive">
+                <svg class="google-plus-svg" width="24" height="24" viewBox="0 0 36 36">
+                  <path fill="#4285F4" d="M16 16v14h4V20z"></path>
+                  <path fill="#34A853" d="M30 16H20l-4 4h14z"></path>
+                  <path fill="#FBBC05" d="M6 16h10l4-4H6z"></path>
+                  <path fill="#EA4335" d="M20 16V6h-4v14z"></path>
+                  <path fill="none" d="M0 0h36v36H0z"></path>
+                </svg>
+                <span class="gdrive-new-label">New</span>
               </button>
+
+              <!-- Google Drive Dropdown Menu -->
+              <div class="gdrive-menu" id="gdriveNewMenu" style="display: none;">
+                <button type="button" class="gdrive-menu-item" id="menuNewFolder">
+                  <span class="menu-icon">📁</span>
+                  <div class="menu-text-wrap">
+                    <span class="menu-title">New folder</span>
+                  </div>
+                </button>
+                <div class="gdrive-menu-divider"></div>
+                <button type="button" class="gdrive-menu-item" id="menuUploadFile">
+                  <span class="menu-icon">📤</span>
+                  <div class="menu-text-wrap">
+                    <span class="menu-title">File upload</span>
+                  </div>
+                </button>
+                <div class="gdrive-menu-divider"></div>
+                <button type="button" class="gdrive-menu-item" id="menuNewDoc">
+                  <span class="menu-icon">📝</span>
+                  <div class="menu-text-wrap">
+                    <span class="menu-title">Google Docs / Study Note</span>
+                  </div>
+                </button>
+                <button type="button" class="gdrive-menu-item" id="menuNewLink">
+                  <span class="menu-icon">🔗</span>
+                  <div class="menu-text-wrap">
+                    <span class="menu-title">New Study Link</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Google Drive Navigation Links -->
+            <nav class="gdrive-nav-list" aria-label="Drive Navigation">
+              <button type="button" class="gdrive-nav-item active" id="gdriveNavMyDrive">
+                <span class="gdrive-nav-icon">📁</span>
+                <span class="gdrive-nav-label">My Drive</span>
+                <span class="gdrive-nav-badge" id="gdriveNavCount">0</span>
+              </button>
+              <button type="button" class="gdrive-nav-item" id="gdriveNavStarred">
+                <span class="gdrive-nav-icon">⭐</span>
+                <span class="gdrive-nav-label">Starred</span>
+                <span class="gdrive-nav-badge" id="gdriveStarredCount" style="display: none;">0</span>
+              </button>
+              <button type="button" class="gdrive-nav-item" id="gdriveNavRecent">
+                <span class="gdrive-nav-icon">🕒</span>
+                <span class="gdrive-nav-label">Recent</span>
+              </button>
+              <button type="button" class="gdrive-nav-item" id="gdriveNavTrash">
+                <span class="gdrive-nav-icon">🗑️</span>
+                <span class="gdrive-nav-label">Trash</span>
+              </button>
+            </nav>
+
+            <!-- Google Drive Storage Usage Widget -->
+            <div class="gdrive-storage-widget">
+              <div class="gdrive-storage-top">
+                <span class="gdrive-storage-icon">☁️</span>
+                <span class="gdrive-storage-title">Storage</span>
+              </div>
+              <div class="gdrive-storage-bar-track">
+                <div class="gdrive-storage-bar-fill" id="gdriveStorageFill" style="width: 12%;"></div>
+              </div>
+              <div class="gdrive-storage-text" id="gdriveStorageMeta">534 KB of 15 GB used</div>
+            </div>
+          </aside>
+
+          <!-- Google Drive Main Body -->
+          <div class="gdrive-main-body">
+            <!-- Google Drive Header Search Bar & Controls -->
+            <header class="gdrive-header-bar">
+              <!-- Pill Search Bar -->
+              <div class="gdrive-search-pill">
+                <span class="gdrive-search-mag" aria-hidden="true">🔍</span>
+                <input type="text" id="resourceSearchInput" class="gdrive-search-text-input"
+                  placeholder="Search in Drive" autocomplete="off" aria-label="Search in Drive">
+                <button type="button" id="clearResourceSearchBtn" class="gdrive-search-clear" style="display: none;" title="Clear search">✕</button>
+              </div>
+
+              <!-- Header Status & Actions Right -->
+              <div class="gdrive-header-actions">
+                <div class="gdrive-offline-status" title="Files stored offline in your browser">
+                  <span class="gdrive-check-icon">✓</span>
+                  <span class="hide-mobile">Ready for offline</span>
+                </div>
+                <!-- Quick File Upload Trigger -->
+                <input type="file" id="batchResourceFileInput" multiple style="display: none;" accept="*/*">
+                <button type="button" class="btn-gdrive-icon" id="openUploadResourceBtn" title="Upload files directly">
+                  <span>📤</span>
+                </button>
+                <button type="button" class="btn-gdrive-icon" id="gdriveToggleDetailsBtn" title="View details (ⓘ)">
+                  <span>ⓘ</span>
+                </button>
+              </div>
+            </header>
+
+            <!-- Google Drive Sub-Bar: Breadcrumbs & Filter Chips -->
+            <div class="gdrive-sub-bar">
+              <div class="gdrive-breadcrumb-zone">
+                <div class="gdrive-breadcrumb-trail">
+                  <button type="button" class="gdrive-crumb-item active" id="gdriveBreadcrumbRoot">
+                    <span>My Drive</span>
+                    <span class="gdrive-crumb-caret">▾</span>
+                  </button>
+                  <span class="gdrive-crumb-sep" id="gdriveBreadcrumbSep" style="display: none;">›</span>
+                  <span class="gdrive-crumb-active" id="gdriveBreadcrumbCurrent" style="display: none;">Folder</span>
+                </div>
+                <button type="button" class="btn-gdrive-back-root" id="gdriveBackToRootBtn" style="display: none;" title="Go back to My Drive">
+                  <span>←</span> All Files
+                </button>
+              </div>
+
+              <!-- Google Drive Filter Chips & View Mode Toggle -->
+              <div class="gdrive-toolbar-controls">
+                <!-- Type Filter Chip -->
+                <div class="gdrive-chip-wrap">
+                  <select id="resourceTypeFilterSelect" class="gdrive-chip-select" title="Filter by File Type">
+                    <option value="all">Type</option>
+                    <option value="pdf">📄 PDFs</option>
+                    <option value="doc">📝 Documents &amp; Notes</option>
+                    <option value="image">🖼️ Photos &amp; Images</option>
+                    <option value="sheet">📊 Spreadsheets</option>
+                    <option value="link">🔗 Links</option>
+                  </select>
+                </div>
+
+                <!-- Folder Filter Chip -->
+                <div class="gdrive-chip-wrap">
+                  <select id="resourceFolderFilterSelect" class="gdrive-chip-select" title="Filter by Folder">
+                    <option value="all">Folders</option>
+                  </select>
+                </div>
+
+                <!-- Sort Chip -->
+                <div class="gdrive-chip-wrap">
+                  <select id="resourceSortSelect" class="gdrive-chip-select" title="Sort files">
+                    <option value="newest">Last modified ▾</option>
+                    <option value="oldest">Last modified (oldest first)</option>
+                    <option value="name">Name (A to Z)</option>
+                    <option value="size-desc">Storage used (largest)</option>
+                    <option value="size-asc">Storage used (smallest)</option>
+                  </select>
+                </div>
+
+                <!-- Layout Toggle (Grid / List) -->
+                <div class="gdrive-view-toggle-box" role="group" aria-label="Layout View">
+                  <button type="button" class="gdrive-layout-btn" id="gdriveViewListBtn" title="List layout" aria-label="List layout">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
+                    </svg>
+                  </button>
+                  <button type="button" class="gdrive-layout-btn active" id="gdriveViewGridBtn" title="Grid layout" aria-label="Grid layout">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M4 11h5V5H4v6zm0 7h5v-6H4v6zm6 0h5v-6h-5v6zm6 0h5v-6h-5v6zm-6-7h5V5h-5v6zm6-6v6h5V5h-5z"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Content Split (Canvas + Slide-out Details Drawer) -->
+            <div class="gdrive-content-split">
+              <!-- Scrollable Drive Canvas Area -->
+              <div class="gdrive-canvas" id="gdriveCanvas">
+                <!-- Dropzone Quick Bar -->
+                <div class="gdrive-dropzone-bar" id="resourcesDropzone">
+                  <input type="file" id="resourceDropInput" multiple style="display: none;" accept="*/*">
+                  <span class="gdrive-drop-icon">☁️</span>
+                  <span class="gdrive-drop-text">
+                    Drop study files here to add to <strong>My Drive</strong>, or <button type="button" class="gdrive-browse-link" id="dropzoneBrowseBtn">browse device</button>
+                  </span>
+                </div>
+
+                <!-- SECTION: Google Drive Folders -->
+                <div class="gdrive-section-wrap" id="gdriveFoldersSection">
+                  <h3 class="gdrive-section-heading">Folders</h3>
+                  <div class="gdrive-folders-grid" id="gdriveFoldersGrid">
+                    <!-- Populated dynamically via JS -->
+                  </div>
+                </div>
+
+                <!-- SECTION: Google Drive Files -->
+                <div class="gdrive-section-wrap" id="gdriveFilesSection">
+                  <div class="gdrive-files-header-line">
+                    <h3 class="gdrive-section-heading">Files</h3>
+                    <span class="gdrive-files-count-badge" id="resourcesStatsOverview">0 files</span>
+                  </div>
+
+                  <!-- Container for Grid Cards or List Table -->
+                  <div id="resourcesContainer"></div>
+
+                  <!-- Empty State -->
+                  <div class="empty-state" id="resourcesEmptyState" style="display: none;">
+                    <div class="empty-icon">📁</div>
+                    <h3 class="empty-title">This folder is empty</h3>
+                    <p class="empty-desc">Drop files here or click the "+ New" button to upload documents, PDFs, or create revision notes.</p>
+                    <button type="button" class="btn-primary" id="emptyStateUploadBtn">➕ Add Files</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Google Drive Right Details Drawer (ⓘ) -->
+              <aside class="gdrive-details-drawer" id="gdriveDetailsPane" style="display: none;">
+                <div class="gdrive-details-head">
+                  <h4 class="gdrive-details-title" id="gdriveDetailsTitle">File Details</h4>
+                  <button type="button" class="btn-gdrive-close-pane" id="closeDetailsPaneBtn" title="Close details pane">✕</button>
+                </div>
+                <div class="gdrive-details-content" id="gdriveDetailsBody">
+                  <div class="gdrive-details-placeholder">
+                    <span style="font-size: 2.5rem; opacity: 0.5;">📁</span>
+                    <p>Select a file to inspect its preview, size, folder, and revision notes.</p>
+                  </div>
+                </div>
+              </aside>
             </div>
           </div>
+        </div>
 
-          <!-- Drag and Drop Interactive Upload Dropzone -->
-          <div class="resources-dropzone" id="resourcesDropzone">
-            <input type="file" id="resourceDropInput" multiple style="display: none;" accept="*/*">
-            <div class="dropzone-glow-ring"></div>
-            <div class="dropzone-icon-wrap">
-              <span class="dropzone-cloud-icon">☁️</span>
-              <span class="dropzone-arrow-icon">⬆️</span>
-            </div>
-            <div class="dropzone-text-content">
-              <h3 class="dropzone-heading">Drag &amp; drop any file here, or <button type="button" class="dropzone-browse-link" id="dropzoneBrowseBtn">browse device</button></h3>
-              <p class="dropzone-sub">Supports <strong>PDF documents</strong>, <strong>Images</strong> (PNG, JPG, SVG, WebP), <strong>Docs/Word/PPT/Excel</strong>, <strong>ZIP archives</strong>, audio, and any file format.</p>
-            </div>
-            <div class="dropzone-quick-chips">
-              <span class="chip-item">📄 PDF</span>
-              <span class="chip-item">🖼️ Image</span>
-              <span class="chip-item">📑 Document</span>
-              <span class="chip-item">📊 Spreadsheet</span>
-              <span class="chip-item">📦 Archive</span>
-              <span class="chip-item">📁 Any File</span>
-            </div>
-          </div>
-
-          <!-- Search, Type Filter Pills & Sorting Controls -->
-          <div class="resources-filters-bar">
-            <!-- Type Filters -->
-            <div class="resource-type-pills" role="group" aria-label="Filter by file type">
-              <button type="button" class="type-pill active" data-type="all" id="pillTypeAll">
-                <span>All</span>
-                <span class="pill-badge" id="typeCountAll">0</span>
-              </button>
-              <button type="button" class="type-pill" data-type="pdf" id="pillTypePdf">
-                <span>📄 PDFs</span>
-                <span class="pill-badge" id="typeCountPdf">0</span>
-              </button>
-              <button type="button" class="type-pill" data-type="image" id="pillTypeImage">
-                <span>🖼️ Images</span>
-                <span class="pill-badge" id="typeCountImage">0</span>
-              </button>
-              <button type="button" class="type-pill" data-type="doc" id="pillTypeDoc">
-                <span>📑 Documents</span>
-                <span class="pill-badge" id="typeCountDoc">0</span>
-              </button>
-              <button type="button" class="type-pill" data-type="other" id="pillTypeOther">
-                <span>📦 Other</span>
-                <span class="pill-badge" id="typeCountOther">0</span>
-              </button>
-            </div>
-
-            <!-- Resource Search Bar -->
-            <div class="resource-search-wrap">
-              <span class="resource-search-icon">🔍</span>
-              <input type="text" id="resourceSearchInput" class="resource-search-input"
-                placeholder="Search resources by title, file name, unit, or category..." autocomplete="off">
-              <button type="button" id="clearResourceSearchBtn" class="clear-search-btn" style="display: none;" title="Clear search">✕</button>
-            </div>
-
-            <!-- Sorting Select -->
-            <div class="resource-sort-wrap">
-              <select id="resourceSortSelect" class="sort-select" title="Sort resources">
-                <option value="newest">🕒 Newest Uploads First</option>
-                <option value="oldest">⏳ Oldest First</option>
-                <option value="name">🔤 File Name (A - Z)</option>
-                <option value="size-desc">📦 Size: Largest First</option>
-                <option value="size-asc">⚡ Size: Smallest First</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Resource Storage Stats Strip -->
-          <div class="resources-stats-strip" id="resourcesStatsStrip">
-            <div class="stats-left">
-              <span class="stats-icon">📊</span>
-              <span id="resourcesStatsOverview">0 Files</span>
-            </div>
-            <div class="stats-right">
-              <span class="stats-pill-info">💡 1-Click Preview &amp; Download</span>
-            </div>
-          </div>
-
-          <!-- Dynamic Resources Cards Grid -->
-          <div class="resources-grid" id="resourcesContainer">
-            <!-- Rendered dynamically via JavaScript -->
-          </div>
-
-          <!-- Empty State for Resources -->
-          <div class="empty-state" id="resourcesEmptyState" style="display: none;">
-            <div class="empty-icon">📁</div>
-            <h3 class="empty-title">No Resources Found</h3>
-            <p class="empty-desc">No study files match your active filter or search criteria. Upload your lecture notes, PDFs, diagrams, syllabus, or question papers to keep them organized.</p>
-            <button type="button" class="btn-primary" id="emptyStateUploadBtn">➕ Upload First File</button>
-          </div>
+        <!-- Google Drive Right-Click Context Menu -->
+        <div class="gdrive-context-menu" id="gdriveContextMenu" style="display: none;">
+          <button type="button" class="gdrive-ctx-item" id="ctxPreview">
+            <span class="ctx-icon">👁️</span>
+            <span>Preview</span>
+          </button>
+          <button type="button" class="gdrive-ctx-item" id="ctxDownload">
+            <span class="ctx-icon">⬇️</span>
+            <span>Download</span>
+          </button>
+          <button type="button" class="gdrive-ctx-item" id="ctxEdit">
+            <span class="ctx-icon">✏️</span>
+            <span>Edit details</span>
+          </button>
+          <button type="button" class="gdrive-ctx-item" id="ctxStar">
+            <span class="ctx-icon">⭐</span>
+            <span id="ctxStarText">Add to Starred</span>
+          </button>
+          <button type="button" class="gdrive-ctx-item" id="ctxDetails">
+            <span class="ctx-icon">ⓘ</span>
+            <span>File information</span>
+          </button>
+          <div class="ctx-divider"></div>
+          <button type="button" class="gdrive-ctx-item ctx-danger" id="ctxDelete">
+            <span class="ctx-icon">🗑️</span>
+            <span>Move to Trash</span>
+          </button>
         </div>
       </section>
 
@@ -718,37 +884,28 @@
               placeholder="e.g. Higher Education Commission Notes &amp; Formulas" required>
           </div>
 
-          <!-- Paper & Category Classification -->
-          <div class="form-row-2">
-            <div class="form-group">
-              <label class="form-label" for="resourcePaperInput">Target Paper</label>
-              <select id="resourcePaperInput" class="form-select">
-                <option value="ALL">All Papers / General</option>
-                <option value="P1">Paper 1 (General Paper)</option>
-                <option value="P2">Paper 2 (Computer Science)</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="resourceCategoryInput">Resource Category</label>
-              <select id="resourceCategoryInput" class="form-select">
-                <option value="PDF Document">📄 PDF Document</option>
-                <option value="Diagram / Chart">🖼️ Diagram / Infographic / Chart</option>
-                <option value="Previous Year Paper (PYQ)">🎯 Previous Year Paper (PYQ)</option>
-                <option value="Formula Sheet">📊 Formula Sheet / Master Table</option>
-                <option value="Syllabus &amp; Guide">📚 Syllabus &amp; Guide</option>
-                <option value="Handout / Book Chapter">📖 Handout / Book Chapter</option>
-                <option value="Code / Script">💻 Code / Script / Dataset</option>
-                <option value="Audio Lecture">🎵 Audio Lecture</option>
-                <option value="Other Resource">📦 Other Resource</option>
-              </select>
-            </div>
+          <!-- Category / Folder Classification -->
+          <div class="form-group">
+            <label class="form-label" for="resourceCategoryInput">Folder / Category</label>
+            <select id="resourceCategoryInput" class="form-select">
+              <option value="Syllabus &amp; Guide">📚 Syllabus &amp; Guide</option>
+              <option value="Diagram / Chart">🖼️ Diagram / Infographic / Chart</option>
+              <option value="Formula Sheet">📊 Formula Sheet / Master Table</option>
+              <option value="Notes / Summary">📝 Notes / Summary</option>
+              <option value="PDF Document">📄 PDF Document</option>
+              <option value="Previous Year Paper (PYQ)">🎯 Previous Year Paper (PYQ)</option>
+              <option value="Handout / Book Chapter">📖 Handout / Book Chapter</option>
+              <option value="Code / Script">💻 Code / Script / Dataset</option>
+              <option value="Audio Lecture">🎵 Audio Lecture</option>
+              <option value="Other Resource">📦 Other Resource</option>
+            </select>
           </div>
 
           <!-- Unit / Subject -->
           <div class="form-group">
-            <label class="form-label" for="resourceUnitInput">Subject / Unit Category</label>
+            <label class="form-label" for="resourceUnitInput">Topic / Subject Tag</label>
             <input type="text" id="resourceUnitInput" class="form-input"
-              placeholder="e.g. Unit 9: Computer Networks, Unit 2: Research Aptitude">
+              placeholder="e.g. Computer Networks, Research Aptitude, Algorithms">
           </div>
 
           <!-- Short Description -->
@@ -781,10 +938,10 @@
           </div>
         </div>
         <div class="preview-header-actions">
-          <button type="button" class="btn-secondary btn-icon-text" id="previewOpenNewTabBtn" title="Open in dedicated browser tab">
-            <span>↗️</span> <span class="hide-mobile">New Tab</span>
+          <button type="button" class="btn-secondary btn-icon-text" id="previewOpenNewTabBtn" title="Open in dedicated browser tab without downloading">
+            <span>↗️</span> <span class="hide-mobile">Open in Tab</span>
           </button>
-          <button type="button" class="btn-primary btn-icon-text" id="previewDownloadBtn" title="Download file">
+          <button type="button" class="btn-primary btn-icon-text" id="previewDownloadBtn" title="Download file to device">
             <span>⬇️</span> <span class="hide-mobile">Download</span>
           </button>
           <button type="button" class="btn-modal-close" id="closeResourcePreviewBtn" aria-label="Close preview">✕</button>
@@ -793,6 +950,146 @@
 
       <div class="modal-body resource-preview-body" id="resourcePreviewBody">
         <!-- Rendered dynamically based on mime type -->
+      </div>
+      <!-- Google Drive Prev / Next Floating Navigation -->
+      <button type="button" class="btn-gdrive-preview-nav prev" id="previewPrevBtn" title="Previous file (Left arrow)">‹</button>
+      <button type="button" class="btn-gdrive-preview-nav next" id="previewNextBtn" title="Next file (Right arrow)">›</button>
+    </div>
+  </div>
+
+  <!-- MODAL: Google Drive Create New Study Note / Document Modal -->
+  <div class="modal-overlay" id="createDocModal" role="dialog" aria-modal="true" aria-labelledby="createDocModalTitle">
+    <div class="modal-box" style="max-width: 660px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="createDocModalTitle">
+          <span>📝</span> New Study Note / Document
+        </h3>
+        <button type="button" class="btn-modal-close" id="closeDocModalBtn" aria-label="Close modal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="createDocForm">
+          <div class="form-group">
+            <label class="form-label" for="docTitleInput">
+              Document Title <strong style="color: var(--primary);">*</strong>
+            </label>
+            <input type="text" id="docTitleInput" class="form-input"
+              placeholder="e.g. Master Summary: Cache Memory Mapping &amp; Eviction" required>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label" for="docCategoryInput">Folder / Category</label>
+              <select id="docCategoryInput" class="form-select">
+                <option value="Notes / Summary">📝 Notes / Summary</option>
+                <option value="Cheat Sheet">⚡ Quick Cheat Sheet</option>
+                <option value="Formula Sheet">📊 Formula Sheet / Master Table</option>
+                <option value="Syllabus &amp; Guide">📚 Syllabus &amp; Guide</option>
+                <option value="Code &amp; Algorithms">💻 Code &amp; Algorithms</option>
+                <option value="General Resource">📁 General Resource</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="docFormatSelect">Save As Format</label>
+              <select id="docFormatSelect" class="form-select">
+                <option value="pdf">📄 PDF Document (.pdf - valid PDF binary)</option>
+                <option value="md">📑 Markdown Note (.md)</option>
+                <option value="txt">📝 Plain Text (.txt)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="docContentInput">
+              Document Content <strong style="color: var(--primary);">*</strong>
+            </label>
+            <textarea id="docContentInput" class="form-textarea" style="min-height: 180px; font-family: var(--font-mono, monospace); font-size: 0.88rem; line-height: 1.5;"
+              placeholder="Write your study notes, key formulas, concepts, or revision points here..." required></textarea>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="cancelDocModalBtn">Cancel</button>
+        <button type="button" class="btn-primary" id="saveDocBtn">
+          <span>💾</span> Create &amp; Save Document
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Google Drive Create New Folder Modal -->
+  <div class="modal-overlay" id="createFolderModal" role="dialog" aria-modal="true" aria-labelledby="createFolderModalTitle">
+    <div class="modal-box" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="createFolderModalTitle">
+          <span>📁</span> New Folder
+        </h3>
+        <button type="button" class="btn-modal-close" id="closeFolderModalBtn" aria-label="Close modal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="createFolderForm">
+          <div class="form-group">
+            <label class="form-label" for="folderNameInput">
+              Folder Name <strong style="color: var(--primary);">*</strong>
+            </label>
+            <input type="text" id="folderNameInput" class="form-input"
+              placeholder="e.g. Question Papers, Syllabus, Networks" required autofocus>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="cancelFolderModalBtn">Cancel</button>
+        <button type="button" class="btn-primary" id="saveFolderBtn">
+          <span>📁</span> Create Folder
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Google Drive Add Web / Drive Link Modal -->
+  <div class="modal-overlay" id="createLinkModal" role="dialog" aria-modal="true" aria-labelledby="createLinkModalTitle">
+    <div class="modal-box" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="createLinkModalTitle">
+          <span>🔗</span> Add Study Link
+        </h3>
+        <button type="button" class="btn-modal-close" id="closeLinkModalBtn" aria-label="Close modal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="createLinkForm">
+          <div class="form-group">
+            <label class="form-label" for="linkTitleInput">
+              Title <strong style="color: var(--primary);">*</strong>
+            </label>
+            <input type="text" id="linkTitleInput" class="form-input"
+              placeholder="e.g. Official NTA Question Portal" required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="linkUrlInput">
+              Web / Drive URL <strong style="color: var(--primary);">*</strong>
+            </label>
+            <input type="url" id="linkUrlInput" class="form-input"
+              placeholder="https://drive.google.com/... or https://..." required>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="linkDescInput">Notes / Description</label>
+            <textarea id="linkDescInput" class="form-textarea" style="min-height: 75px;"
+              placeholder="Optional notes or what this resource covers..."></textarea>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="cancelLinkModalBtn">Cancel</button>
+        <button type="button" class="btn-primary" id="saveLinkBtn">
+          <span>🔗</span> Save Link
+        </button>
       </div>
     </div>
   </div>
