@@ -436,28 +436,29 @@ function loadStoredData() {
     saveNotes();
   }
 
-  // Load Resources (PDFs, Images, Documents, Any Files)
+  // Load Resources (PDFs, Images, Documents, Any Files) - No default seed files kept
   const savedResources = localStorage.getItem(STORAGE_KEYS.RESOURCES);
   if (savedResources) {
     try {
-      STATE.resources = JSON.parse(savedResources);
-      if (!Array.isArray(STATE.resources) || STATE.resources.length === 0) {
-        if (typeof SEED_RESOURCES !== 'undefined' && SEED_RESOURCES.length > 0) {
-          STATE.resources = [...SEED_RESOURCES];
-          saveResources();
-        }
-      }
+      const parsed = JSON.parse(savedResources);
+      STATE.resources = Array.isArray(parsed)
+        ? parsed.filter(r => r && r.id && !r.id.startsWith('res-seed-'))
+        : [];
+      saveResources();
     } catch (e) {
-      STATE.resources = typeof SEED_RESOURCES !== 'undefined' ? [...SEED_RESOURCES] : [];
+      STATE.resources = [];
       saveResources();
     }
-  } else if (typeof SEED_RESOURCES !== 'undefined') {
-    STATE.resources = [...SEED_RESOURCES];
-    saveResources();
   } else {
     STATE.resources = [];
     saveResources();
   }
+
+  // Clear any default or custom folders (no categories / folders)
+  STATE.customFolders = [];
+  try {
+    localStorage.removeItem(STORAGE_KEYS.CUSTOM_FOLDERS);
+  } catch (e) {}
 }
 
 function saveTopics() {
@@ -1750,25 +1751,6 @@ function getFilteredDriveResources() {
     filtered.sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
   }
 
-  // 2. Filter by Folder / Category
-  if (STATE.resourceFolderFilter && STATE.resourceFolderFilter !== 'all') {
-    filtered = filtered.filter(r => r.category === STATE.resourceFolderFilter);
-  }
-
-  // 3. Filter by File Type Chip
-  if (STATE.resourceTypeFilter && STATE.resourceTypeFilter !== 'all') {
-    if (STATE.resourceTypeFilter === 'pdf') {
-      filtered = filtered.filter(r => r.typeGroup === 'pdf');
-    } else if (STATE.resourceTypeFilter === 'doc') {
-      filtered = filtered.filter(r => r.typeGroup === 'doc' || r.extension === 'txt' || r.extension === 'md');
-    } else if (STATE.resourceTypeFilter === 'image') {
-      filtered = filtered.filter(r => r.typeGroup === 'image');
-    } else if (STATE.resourceTypeFilter === 'sheet') {
-      filtered = filtered.filter(r => r.typeGroup === 'sheet');
-    } else if (STATE.resourceTypeFilter === 'link') {
-      filtered = filtered.filter(r => !!r.linkUrl);
-    }
-  }
 
   // 4. Filter by Live Search Query
   const q = (STATE.resourceSearchQuery || '').trim().toLowerCase();
@@ -1808,45 +1790,8 @@ function renderResources() {
 
   const resources = STATE.resources || [];
 
-  // Populate Folder Filter Dropdown dynamically with all existing categories and custom folders
-  const availableFolders = new Set([
-    'General Study Notes',
-    'PDF Documents',
-    'Diagrams & Charts',
-    'Handouts & Chapters',
-    'Formulas & Cheatsheets',
-    'Quick Links'
-  ]);
-  (STATE.customFolders || []).forEach(f => { if (f) availableFolders.add(f); });
-  resources.forEach(r => { if (r.category) availableFolders.add(r.category); });
-
-  if (DOM.resourceFolderFilterSelect) {
-    const currentVal = STATE.resourceFolderFilter || 'all';
-    DOM.resourceFolderFilterSelect.innerHTML = '<option value="all">Folders</option>';
-    Array.from(availableFolders).sort().forEach(folder => {
-      const opt = document.createElement('option');
-      opt.value = folder;
-      opt.textContent = `📁 ${folder}`;
-      if (folder === currentVal) opt.selected = true;
-      DOM.resourceFolderFilterSelect.appendChild(opt);
-    });
-  }
-
-  // Populate Category options in Add/Edit Resource Modal and Create Doc Modal
-  [DOM.resourceCategoryInput, DOM.docCategoryInput].forEach(sel => {
-    if (sel && sel.tagName === 'SELECT') {
-      const cur = sel.value;
-      const opts = Array.from(availableFolders).sort();
-      sel.innerHTML = opts.map(f => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`).join('');
-      if (cur && availableFolders.has(cur)) sel.value = cur;
-    }
-  });
-
   // Calculate Breakdown Statistics & Storage
   const totalCount = resources.length;
-  const pdfCount = resources.filter(r => r.typeGroup === 'pdf').length;
-  const imgCount = resources.filter(r => r.typeGroup === 'image').length;
-  const docCount = resources.filter(r => r.typeGroup === 'doc' || r.typeGroup === 'sheet').length;
   const totalBytes = resources.reduce((acc, r) => acc + (r.size || 0), 0);
   const formattedTotalSize = formatFileSize(totalBytes);
   const starredList = STATE.starredResourceIds || [];
@@ -1883,70 +1828,12 @@ function renderResources() {
     } else if (STATE.activeDriveNav === 'recent') {
       DOM.gdriveBreadcrumbRoot.innerHTML = '<span>Recent</span>';
     } else {
-      DOM.gdriveBreadcrumbRoot.innerHTML = '<span>My Drive</span> <span class="gdrive-crumb-caret">▾</span>';
+      DOM.gdriveBreadcrumbRoot.innerHTML = '<span>My Drive</span>';
     }
   }
 
-  if (DOM.gdriveBreadcrumbSep && DOM.gdriveBreadcrumbCurrent && DOM.gdriveBackToRootBtn) {
-    if (STATE.resourceFolderFilter && STATE.resourceFolderFilter !== 'all') {
-      DOM.gdriveBreadcrumbSep.style.display = 'inline';
-      DOM.gdriveBreadcrumbCurrent.style.display = 'inline';
-      DOM.gdriveBreadcrumbCurrent.textContent = STATE.resourceFolderFilter;
-      DOM.gdriveBackToRootBtn.style.display = 'inline-flex';
-    } else {
-      DOM.gdriveBreadcrumbSep.style.display = 'none';
-      DOM.gdriveBreadcrumbCurrent.style.display = 'none';
-      DOM.gdriveBackToRootBtn.style.display = 'none';
-    }
-  }
-
-  // --------------------------------------------------------------------------
-  // RENDER GOOGLE DRIVE FOLDERS SECTION
-  // --------------------------------------------------------------------------
-  if (DOM.gdriveFoldersSection && DOM.gdriveFoldersGrid) {
-    if (STATE.activeDriveNav === 'my-drive' && STATE.resourceFolderFilter === 'all') {
-      DOM.gdriveFoldersSection.style.display = 'flex';
-      DOM.gdriveFoldersGrid.innerHTML = '';
-
-      const foldersArray = Array.from(availableFolders).sort();
-      foldersArray.forEach(folderName => {
-        const folderCard = document.createElement('div');
-        folderCard.className = 'gdrive-folder-card';
-        if (STATE.resourceFolderFilter === folderName) {
-          folderCard.classList.add('active-folder');
-        }
-
-        const countInFolder = resources.filter(r => r.category === folderName).length;
-
-        folderCard.innerHTML = `
-          <div class="gdrive-folder-card-main" title="${escapeHtml(folderName)} (${countInFolder} items)">
-            <span class="gdrive-folder-icon">📁</span>
-            <span class="gdrive-folder-title">${escapeHtml(folderName)}</span>
-          </div>
-          <span class="gdrive-folder-more" title="Folder options">⋮</span>
-        `;
-
-        // Click folder -> filter into folder like Google Drive!
-        folderCard.addEventListener('click', (e) => {
-          if (e.target.closest('.gdrive-folder-more')) {
-            e.stopPropagation();
-            if (confirm(`Do you want to delete the custom folder "${folderName}"?`)) {
-              STATE.customFolders = (STATE.customFolders || []).filter(f => f !== folderName);
-              try { localStorage.setItem(STORAGE_KEYS.CUSTOM_FOLDERS, JSON.stringify(STATE.customFolders)); } catch (err) {}
-              if (STATE.resourceFolderFilter === folderName) STATE.resourceFolderFilter = 'all';
-              renderResources();
-            }
-            return;
-          }
-          STATE.resourceFolderFilter = folderName;
-          renderResources();
-        });
-
-        DOM.gdriveFoldersGrid.appendChild(folderCard);
-      });
-    } else {
-      DOM.gdriveFoldersSection.style.display = 'none';
-    }
+  if (DOM.gdriveFoldersSection) {
+    DOM.gdriveFoldersSection.style.display = 'none';
   }
 
   // --------------------------------------------------------------------------
@@ -1995,11 +1882,10 @@ function renderResources() {
     table.innerHTML = `
       <thead>
         <tr>
-          <th style="width: 44%;">Name ▾</th>
-          <th style="width: 20%;">Folder / Location</th>
-          <th style="width: 12%;">Size</th>
-          <th style="width: 14%;">Last Modified</th>
-          <th style="width: 10%; text-align: right;">Actions</th>
+          <th style="width: 58%;">Name ▾</th>
+          <th style="width: 14%;">Size</th>
+          <th style="width: 16%;">Last Modified</th>
+          <th style="width: 12%; text-align: right;">Actions</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -2034,24 +1920,20 @@ function renderResources() {
 
       tr.innerHTML = `
         <td>
-          <div class="gdrive-row-name-cell" title="Click to select, double click to preview">
+          <div class="gdrive-row-name-cell" title="Click to open file in Drive preview">
             <span class="gdrive-row-icon">${icon}</span>
-            <div style="overflow: hidden; max-width: 380px;">
+            <div style="overflow: hidden; max-width: 520px;">
               <div class="gdrive-row-name-text">${highlightedTitle}</div>
               <div class="gdrive-row-subtext">${escapeHtml(res.fileName || 'file')}</div>
             </div>
             ${isStarred ? '<span style="color: #f59e0b; font-size: 0.9rem;" title="Starred">⭐</span>' : ''}
           </div>
         </td>
-        <td>
-          <span class="gdrive-row-category-badge">${escapeHtml(res.category || 'My Drive')}</span>
-          ${res.unit ? `<div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 2px;">🏷️ ${escapeHtml(res.unit)}</div>` : ''}
-        </td>
         <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);">${res.sizeFormatted || formatFileSize(res.size)}</td>
         <td style="font-size: 0.8rem; color: var(--text-dim); white-space: nowrap;">${dateStr}</td>
         <td style="text-align: right;">
           <div class="gdrive-row-actions" style="justify-content: flex-end;">
-            <button type="button" class="btn-gdrive-action action-preview res-preview-btn" title="Preview without downloading" aria-label="Preview">👁️</button>
+            <button type="button" class="btn-gdrive-action action-preview res-preview-btn" title="Preview file" aria-label="Preview">👁️</button>
             <button type="button" class="btn-gdrive-action action-download res-download-btn" title="Download file" aria-label="Download">⬇️</button>
             <button type="button" class="btn-gdrive-action res-star-btn" title="${isStarred ? 'Remove from Starred' : 'Add to Starred'}">${isStarred ? '⭐' : '☆'}</button>
             <button type="button" class="btn-gdrive-action res-menu-btn" title="More actions">⋮</button>
@@ -2059,13 +1941,14 @@ function renderResources() {
         </td>
       `;
 
-      // Select on single click & update Details Drawer
+      // Single click directly opens the file preview like in Drive!
       tr.addEventListener('click', (e) => {
         if (e.target.closest('button')) return;
         selectDriveFile(res.id);
+        openResourcePreview(res.id);
       });
 
-      // Double-click to preview directly like Google Drive
+      // Double-click also opens preview
       tr.addEventListener('dblclick', () => {
         openResourcePreview(res.id);
       });
@@ -2201,13 +2084,14 @@ function renderResources() {
       </div>
     `;
 
-    // 1-Click: Select file & update Details Drawer
+    // 1-Click: Directly open file preview like Google Drive!
     card.addEventListener('click', (e) => {
       if (e.target.closest('.res-menu-btn')) return;
       selectDriveFile(res.id);
+      openResourcePreview(res.id);
     });
 
-    // Double-click: Preview directly like Google Drive
+    // Double-click also opens preview
     card.addEventListener('dblclick', () => {
       openResourcePreview(res.id);
     });
@@ -2321,7 +2205,7 @@ function renderDetailsPane(resourceId) {
       </div>
       <div class="gdrive-prop-row">
         <span class="gdrive-prop-label">Location</span>
-        <span class="gdrive-prop-val">My Drive › ${escapeHtml(res.category || 'General')}</span>
+        <span class="gdrive-prop-val">My Drive</span>
       </div>
       <div class="gdrive-prop-row">
         <span class="gdrive-prop-label">Owner</span>
@@ -2528,7 +2412,7 @@ async function saveResourceForm(e) {
     return;
   }
 
-  const category = (DOM.resourceCategoryInput ? DOM.resourceCategoryInput.value : 'General Study Notes') || 'General Study Notes';
+  const category = (DOM.resourceCategoryInput ? DOM.resourceCategoryInput.value : '') || '';
   const unit = (DOM.resourceUnitInput ? DOM.resourceUnitInput.value : '').trim();
   const desc = (DOM.resourceDescInput ? DOM.resourceDescInput.value : '').trim();
 
@@ -2645,11 +2529,7 @@ async function handleBatchResourceFiles(fileList) {
     const fileDataUrl = await readFileAsDataURL(file);
     await IdbResourceStore.saveFile(resId, fileDataUrl, file.type, file.name);
 
-    let category = 'General Study Notes';
-    if (group === 'pdf') category = 'PDF Documents';
-    else if (group === 'image') category = 'Diagrams & Charts';
-    else if (group === 'sheet') category = 'Formulas & Cheatsheets';
-    else if (group === 'doc') category = 'Handouts & Chapters';
+    const category = '';
 
     const newResource = {
       id: resId,
@@ -2714,7 +2594,7 @@ async function saveCreateDoc(e) {
     return;
   }
 
-  const category = (DOM.docCategoryInput ? DOM.docCategoryInput.value : 'General Study Notes') || 'General Study Notes';
+  const category = (DOM.docCategoryInput ? DOM.docCategoryInput.value : '') || '';
   const format = DOM.docFormatSelect ? DOM.docFormatSelect.value : 'pdf';
   const content = (DOM.docContentInput ? DOM.docContentInput.value : '').trim() || `${title}\n\nRevision notes created in NathKhat.`;
 
@@ -3132,50 +3012,12 @@ async function downloadResource(resourceId) {
  * so clicking Preview or Download immediately after initial load works with 0 errors.
  */
 async function seedDefaultFilesIntoIdb() {
-  const seedFiles = [
-    {
-      id: "res-seed-1",
-      title: "UGC NET Master Syllabus & Examination Strategy Guide",
-      fileName: "UGC_NET_Master_Syllabus_Strategy.pdf",
-      category: "Syllabus & Guide",
-      unit: "General Examination Guide",
-      desc: "Comprehensive breakdown of key scoring areas: Teaching & Research Aptitude, Data Interpretation, Higher Education System, and Computer Science core syllabus guide with preparation milestones."
-    },
-    {
-      id: "res-seed-3",
-      title: "TOC Decidability & Language Classes Quick Reference",
-      fileName: "TOC_Decidability_Closure_Guide.pdf",
-      category: "Formula Sheet",
-      unit: "Theory of Computation",
-      desc: "Master table of decidability problems: Emptiness, Finiteness, Equivalence, Membership across Regular, Context-Free, Context-Sensitive, Recursive, and Recursively Enumerable languages."
-    },
-    {
-      id: "res-seed-4",
-      title: "Square of Opposition & Logical Fallacies Quick Summary",
-      fileName: "Logical_Reasoning_Cheat_Sheet.txt",
-      category: "Notes / Summary",
-      unit: "Logical Reasoning",
-      desc: "Quick rulebook for AEIO propositions: Contradictories (A-O, E-I), Contraries (A-E), Subcontraries (I-O), and Subalternation truth propagation rules with classical syllogism shortcuts."
-    }
-  ];
-
-  for (const s of seedFiles) {
-    try {
-      const existing = await IdbResourceStore.getFile(s.id);
-      if (!existing) {
-        if (s.fileName.endsWith('.pdf')) {
-          const blob = generateValidPdfBlob(s.title, s.desc, { category: s.category, unit: s.unit });
-          const dUrl = await blobToDataUrl(blob);
-          if (dUrl) await IdbResourceStore.saveFile(s.id, dUrl, 'application/pdf', s.fileName);
-        } else if (s.fileName.endsWith('.txt')) {
-          const txt = `${s.title}\n\n${s.desc}\n\nGenerated by NathKhat Revision Hub`;
-          const blob = new Blob(['\uFEFF' + txt], { type: 'text/plain;charset=utf-8' });
-          const dUrl = await blobToDataUrl(blob);
-          if (dUrl) await IdbResourceStore.saveFile(s.id, dUrl, 'text/plain', s.fileName);
-        }
-      }
-    } catch (e) {}
-  }
+  // Ensure no default mock files are kept in IndexedDB
+  try {
+    ['res-seed-1', 'res-seed-2', 'res-seed-3', 'res-seed-4'].forEach(id => {
+      IdbResourceStore.deleteFile(id).catch(() => {});
+    });
+  } catch (e) {}
 }
 
 /* ==========================================================================
@@ -3293,9 +3135,8 @@ async function openResourcePreview(resourceId) {
             <button type="button" class="btn-secondary" style="padding: 4px 12px; font-size: 0.8rem; flex-shrink: 0;" id="previewCopyDocBtn">📋 Copy</button>
           </div>
           <div class="gdrive-doc-sheet-meta">
-            <span>📁 ${escapeHtml(res.category || 'General Document')}</span>
+            <span>📊 ${wordsCount} words</span>
             ${res.unit ? `<span>• 🏷️ ${escapeHtml(res.unit)}</span>` : ''}
-            <span>• 📊 ${wordsCount} words</span>
           </div>
           <div class="gdrive-doc-sheet-body">${escapeHtml(textContent || 'No text content available.')}</div>
         </div>
@@ -3331,7 +3172,6 @@ async function openResourcePreview(resourceId) {
           <div class="gdrive-doc-sheet-meta" style="justify-content: center;">
             <span>${escapeHtml(res.fileName || 'file')}</span>
             <span>• ${res.sizeFormatted || formatFileSize(res.size)}</span>
-            <span>• ${escapeHtml(res.category || 'General')}</span>
           </div>
           ${res.description ? `<p style="color: var(--text-muted); line-height: 1.6; text-align: left; background: rgba(0,0,0,0.06); padding: 1.25rem; border-radius: 8px; margin: 1.25rem 0;">${escapeHtml(res.description)}</p>` : ''}
           ${res.linkUrl ? `<div style="margin: 1.5rem 0;"><a href="${res.linkUrl}" target="_blank" rel="noopener" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 0.75rem 1.5rem; text-decoration: none;"><span>🔗</span> Open Link in New Tab</a></div>` : ''}
@@ -3389,10 +3229,7 @@ function setupResourceEventListeners() {
     if (storedViewMode === 'list' || storedViewMode === 'grid') {
       STATE.resourceViewMode = storedViewMode;
     }
-    const storedFolders = localStorage.getItem(STORAGE_KEYS.CUSTOM_FOLDERS);
-    if (storedFolders) {
-      STATE.customFolders = JSON.parse(storedFolders);
-    }
+    STATE.customFolders = [];
     const storedStarred = localStorage.getItem(STORAGE_KEYS.STARRED_RESOURCES);
     if (storedStarred) {
       STATE.starredResourceIds = JSON.parse(storedStarred);

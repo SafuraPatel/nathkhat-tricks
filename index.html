@@ -254,13 +254,6 @@
 
               <!-- Google Drive Dropdown Menu -->
               <div class="gdrive-menu" id="gdriveNewMenu" style="display: none;">
-                <button type="button" class="gdrive-menu-item" id="menuNewFolder">
-                  <span class="menu-icon">📁</span>
-                  <div class="menu-text-wrap">
-                    <span class="menu-title">New folder</span>
-                  </div>
-                </button>
-                <div class="gdrive-menu-divider"></div>
                 <button type="button" class="gdrive-menu-item" id="menuUploadFile">
                   <span class="menu-icon">📤</span>
                   <div class="menu-text-wrap">
@@ -347,43 +340,18 @@
               </div>
             </header>
 
-            <!-- Google Drive Sub-Bar: Breadcrumbs & Filter Chips -->
+            <!-- Google Drive Sub-Bar: Breadcrumbs & Controls -->
             <div class="gdrive-sub-bar">
               <div class="gdrive-breadcrumb-zone">
                 <div class="gdrive-breadcrumb-trail">
                   <button type="button" class="gdrive-crumb-item active" id="gdriveBreadcrumbRoot">
                     <span>My Drive</span>
-                    <span class="gdrive-crumb-caret">▾</span>
                   </button>
-                  <span class="gdrive-crumb-sep" id="gdriveBreadcrumbSep" style="display: none;">›</span>
-                  <span class="gdrive-crumb-active" id="gdriveBreadcrumbCurrent" style="display: none;">Folder</span>
                 </div>
-                <button type="button" class="btn-gdrive-back-root" id="gdriveBackToRootBtn" style="display: none;" title="Go back to My Drive">
-                  <span>←</span> All Files
-                </button>
               </div>
 
-              <!-- Google Drive Filter Chips & View Mode Toggle -->
+              <!-- Google Drive Controls & View Mode Toggle -->
               <div class="gdrive-toolbar-controls">
-                <!-- Type Filter Chip -->
-                <div class="gdrive-chip-wrap">
-                  <select id="resourceTypeFilterSelect" class="gdrive-chip-select" title="Filter by File Type">
-                    <option value="all">Type</option>
-                    <option value="pdf">📄 PDFs</option>
-                    <option value="doc">📝 Documents &amp; Notes</option>
-                    <option value="image">🖼️ Photos &amp; Images</option>
-                    <option value="sheet">📊 Spreadsheets</option>
-                    <option value="link">🔗 Links</option>
-                  </select>
-                </div>
-
-                <!-- Folder Filter Chip -->
-                <div class="gdrive-chip-wrap">
-                  <select id="resourceFolderFilterSelect" class="gdrive-chip-select" title="Filter by Folder">
-                    <option value="all">Folders</option>
-                  </select>
-                </div>
-
                 <!-- Sort Chip -->
                 <div class="gdrive-chip-wrap">
                   <select id="resourceSortSelect" class="gdrive-chip-select" title="Sort files">
@@ -424,18 +392,10 @@
                   </span>
                 </div>
 
-                <!-- SECTION: Google Drive Folders -->
-                <div class="gdrive-section-wrap" id="gdriveFoldersSection">
-                  <h3 class="gdrive-section-heading">Folders</h3>
-                  <div class="gdrive-folders-grid" id="gdriveFoldersGrid">
-                    <!-- Populated dynamically via JS -->
-                  </div>
-                </div>
-
                 <!-- SECTION: Google Drive Files -->
                 <div class="gdrive-section-wrap" id="gdriveFilesSection">
                   <div class="gdrive-files-header-line">
-                    <h3 class="gdrive-section-heading">Files</h3>
+                    <h3 class="gdrive-section-heading">All Files</h3>
                     <span class="gdrive-files-count-badge" id="resourcesStatsOverview">0 files</span>
                   </div>
 
@@ -445,7 +405,7 @@
                   <!-- Empty State -->
                   <div class="empty-state" id="resourcesEmptyState" style="display: none;">
                     <div class="empty-icon">📁</div>
-                    <h3 class="empty-title">This folder is empty</h3>
+                    <h3 class="empty-title">No files yet</h3>
                     <p class="empty-desc">Drop files here or click the "+ New" button to upload documents, PDFs, or create revision notes.</p>
                     <button type="button" class="btn-primary" id="emptyStateUploadBtn">➕ Add Files</button>
                   </div>
@@ -884,22 +844,6 @@
               placeholder="e.g. Higher Education Commission Notes &amp; Formulas" required>
           </div>
 
-          <!-- Category / Folder Classification -->
-          <div class="form-group">
-            <label class="form-label" for="resourceCategoryInput">Folder / Category</label>
-            <select id="resourceCategoryInput" class="form-select">
-              <option value="Syllabus &amp; Guide">📚 Syllabus &amp; Guide</option>
-              <option value="Diagram / Chart">🖼️ Diagram / Infographic / Chart</option>
-              <option value="Formula Sheet">📊 Formula Sheet / Master Table</option>
-              <option value="Notes / Summary">📝 Notes / Summary</option>
-              <option value="PDF Document">📄 PDF Document</option>
-              <option value="Previous Year Paper (PYQ)">🎯 Previous Year Paper (PYQ)</option>
-              <option value="Handout / Book Chapter">📖 Handout / Book Chapter</option>
-              <option value="Code / Script">💻 Code / Script / Dataset</option>
-              <option value="Audio Lecture">🎵 Audio Lecture</option>
-              <option value="Other Resource">📦 Other Resource</option>
-            </select>
-          </div>
 
           <!-- Unit / Subject -->
           <div class="form-group">
@@ -977,26 +921,13 @@
               placeholder="e.g. Master Summary: Cache Memory Mapping &amp; Eviction" required>
           </div>
 
-          <div class="form-row-2">
-            <div class="form-group">
-              <label class="form-label" for="docCategoryInput">Folder / Category</label>
-              <select id="docCategoryInput" class="form-select">
-                <option value="Notes / Summary">📝 Notes / Summary</option>
-                <option value="Cheat Sheet">⚡ Quick Cheat Sheet</option>
-                <option value="Formula Sheet">📊 Formula Sheet / Master Table</option>
-                <option value="Syllabus &amp; Guide">📚 Syllabus &amp; Guide</option>
-                <option value="Code &amp; Algorithms">💻 Code &amp; Algorithms</option>
-                <option value="General Resource">📁 General Resource</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label class="form-label" for="docFormatSelect">Save As Format</label>
-              <select id="docFormatSelect" class="form-select">
-                <option value="pdf">📄 PDF Document (.pdf - valid PDF binary)</option>
-                <option value="md">📑 Markdown Note (.md)</option>
-                <option value="txt">📝 Plain Text (.txt)</option>
-              </select>
-            </div>
+          <div class="form-group">
+            <label class="form-label" for="docFormatSelect">Save As Format</label>
+            <select id="docFormatSelect" class="form-select">
+              <option value="pdf">📄 PDF Document (.pdf - valid PDF binary)</option>
+              <option value="md">📑 Markdown Note (.md)</option>
+              <option value="txt">📝 Plain Text (.txt)</option>
+            </select>
           </div>
 
           <div class="form-group">
@@ -1013,37 +944,6 @@
         <button type="button" class="btn-secondary" id="cancelDocModalBtn">Cancel</button>
         <button type="button" class="btn-primary" id="saveDocBtn">
           <span>💾</span> Create &amp; Save Document
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL: Google Drive Create New Folder Modal -->
-  <div class="modal-overlay" id="createFolderModal" role="dialog" aria-modal="true" aria-labelledby="createFolderModalTitle">
-    <div class="modal-box" style="max-width: 440px;">
-      <div class="modal-header">
-        <h3 class="modal-title" id="createFolderModalTitle">
-          <span>📁</span> New Folder
-        </h3>
-        <button type="button" class="btn-modal-close" id="closeFolderModalBtn" aria-label="Close modal">✕</button>
-      </div>
-
-      <div class="modal-body">
-        <form id="createFolderForm">
-          <div class="form-group">
-            <label class="form-label" for="folderNameInput">
-              Folder Name <strong style="color: var(--primary);">*</strong>
-            </label>
-            <input type="text" id="folderNameInput" class="form-input"
-              placeholder="e.g. Question Papers, Syllabus, Networks" required autofocus>
-          </div>
-        </form>
-      </div>
-
-      <div class="modal-footer">
-        <button type="button" class="btn-secondary" id="cancelFolderModalBtn">Cancel</button>
-        <button type="button" class="btn-primary" id="saveFolderBtn">
-          <span>📁</span> Create Folder
         </button>
       </div>
     </div>
