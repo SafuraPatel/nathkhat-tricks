@@ -28,16 +28,38 @@ exports.handler = async (event, context) => {
     const store = getStore("nathkhat_vault");
 
     if (event.httpMethod === "GET") {
-      let data = null;
-      try {
-        data = await store.get("app_data", { type: "json" });
-      } catch (getErr) {
-        console.warn("Netlify Blobs read notice:", getErr.message);
+      const query = event.queryStringParameters || {};
+
+      // 1. Fetch individual Drive file by file_id
+      if (query.file_id) {
+        let fileRecord = null;
+        try {
+          fileRecord = await store.get("file_" + query.file_id, { type: "json" });
+        } catch (getErr) {
+          console.warn("Netlify Blobs file read notice:", getErr.message);
+        }
+
+        if (fileRecord) {
+          return {
+            statusCode: 200,
+            headers,
+            body: JSON.stringify(fileRecord)
+          };
+        } else {
+          return {
+            statusCode: 404,
+            headers,
+            body: JSON.stringify({ error: "File not found" })
+          };
+        }
       }
 
-      // Lightweight timestamp check
-      const query = event.queryStringParameters || {};
+      // 2. Lightweight timestamp check
       if (query.timestamp_only === "1") {
+        let data = null;
+        try {
+          data = await store.get("app_data", { type: "json" });
+        } catch (getErr) {}
         return {
           statusCode: 200,
           headers,
@@ -45,6 +67,14 @@ exports.handler = async (event, context) => {
             updatedAt: data && data.updatedAt ? data.updatedAt : 0
           })
         };
+      }
+
+      // 3. Full app data snapshot
+      let data = null;
+      try {
+        data = await store.get("app_data", { type: "json" });
+      } catch (getErr) {
+        console.warn("Netlify Blobs read notice:", getErr.message);
       }
 
       return {
@@ -62,7 +92,39 @@ exports.handler = async (event, context) => {
 
     if (event.httpMethod === "POST") {
       const payload = JSON.parse(event.body || "{}");
-      
+
+      // A. Save individual Drive file
+      if (payload.action === "save_file" && payload.fileId && payload.dataUrl) {
+        const fileRecord = {
+          id: payload.fileId,
+          dataUrl: payload.dataUrl,
+          mimeType: payload.mimeType || "",
+          fileName: payload.fileName || "",
+          updatedAt: Date.now()
+        };
+        await store.setJSON("file_" + payload.fileId, fileRecord);
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({ success: true, fileId: payload.fileId })
+        };
+      }
+
+      // B. Delete individual Drive file
+      if (payload.action === "delete_file" && payload.fileId) {
+        try {
+          await store.delete("file_" + payload.fileId);
+        } catch (delErr) {
+          console.warn("Netlify Blobs file delete notice:", delErr.message);
+        }
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({ success: true, deleted: payload.fileId })
+        };
+      }
+
+      // C. Save full app snapshot
       const record = {
         topics: Array.isArray(payload.topics) ? payload.topics : [],
         notes: Array.isArray(payload.notes) ? payload.notes : [],

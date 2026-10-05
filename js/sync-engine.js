@@ -152,20 +152,48 @@ const SyncEngine = (function() {
     lastPushTimestamp = now;
     lastKnownUpdatedAt = now;
 
+    const rawResources = Array.isArray(data.resources) ? data.resources : [];
+
+    // Ensure all individual files are pushed to Netlify Blobs storage
+    // and keep the main snapshot payload light (< 3MB) to guarantee 100% reliable cloud sync
+    let totalPayloadEst = 0;
+    const cleanResources = rawResources.map(r => {
+      if (!r) return r;
+      const dataLen = (r.dataUrl && typeof r.dataUrl === 'string') ? r.dataUrl.length : 0;
+      totalPayloadEst += dataLen;
+
+      // Always backup file data to Netlify Blobs file store
+      if (r.dataUrl && typeof r.dataUrl === 'string' && r.dataUrl.startsWith('data:')) {
+        pushFile(r.id, r.dataUrl, r.mimeType, r.fileName).catch(() => {});
+      }
+
+      // If single file > 1.2MB, or total data > 3MB, omit dataUrl from main snapshot to prevent hitting Netlify 6MB body limit
+      if (dataLen > 1200000 || totalPayloadEst > 3000000) {
+        return {
+          ...r,
+          dataUrl: '' // Will be fetched seamlessly on-demand via fetchFile
+        };
+      }
+      return r;
+    });
+
     const payload = {
       topics: Array.isArray(data.topics) ? data.topics : [],
       notes: Array.isArray(data.notes) ? data.notes : [],
-      resources: Array.isArray(data.resources) ? data.resources : [],
+      resources: cleanResources,
       bin: Array.isArray(data.bin) ? data.bin : [],
       updatedAt: now
     };
 
-    // A. Instant 0ms broadcast to local tabs
+    // A. Instant 0ms broadcast to local tabs (send rawResources with all full dataUrls for 0ms cross-tab speed)
     if (broadcastChannel) {
       try {
         broadcastChannel.postMessage({
           type: 'SNAPSHOT_UPDATE',
-          payload
+          payload: {
+            ...payload,
+            resources: rawResources
+          }
         });
       } catch (e) {}
     }
@@ -205,7 +233,65 @@ const SyncEngine = (function() {
     }, 1500);
   }
 
-  // 6. Start Real-Time Silent Sync Engine
+  // 6. Push Individual File to Netlify Blobs Cloud Storage
+  async function pushFile(fileId, dataUrl, mimeType = '', fileName = '') {
+    if (!fileId || !dataUrl || typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) return false;
+    try {
+      const res = await fetch(NETLIFY_SYNC_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save_file',
+          fileId,
+          dataUrl,
+          mimeType: mimeType || 'application/octet-stream',
+          fileName: fileName || 'file'
+        })
+      });
+      return res.ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // 7. Fetch Individual File from Netlify Blobs Cloud Storage
+  async function fetchFile(fileId) {
+    if (!fileId) return null;
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 9000);
+      const res = await fetch(`${NETLIFY_SYNC_ENDPOINT}?file_id=${encodeURIComponent(fileId)}`, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.dataUrl) {
+          return json.dataUrl;
+        }
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  // 8. Delete Individual File from Netlify Blobs Cloud Storage
+  async function deleteFile(fileId) {
+    if (!fileId) return;
+    try {
+      fetch(NETLIFY_SYNC_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'delete_file',
+          fileId
+        })
+      }).catch(() => {});
+    } catch (e) {}
+  }
+
+  // 9. Start Real-Time Silent Sync Engine
   function startSilentSync(callbacks) {
     if (callbacks && typeof callbacks.onRemoteUpdate === 'function') {
       onRemoteUpdateCallback = callbacks.onRemoteUpdate;
@@ -261,6 +347,9 @@ const SyncEngine = (function() {
   return {
     fetchRemoteData,
     pushData,
+    pushFile,
+    fetchFile,
+    deleteFile,
     startSilentSync,
     getCustomUrl,
     setCustomUrl

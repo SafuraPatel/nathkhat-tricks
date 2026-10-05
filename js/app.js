@@ -2618,6 +2618,9 @@ async function saveResourceForm(e) {
 
         const fileDataUrl = await readFileAsDataURL(file);
         await IdbResourceStore.saveFile(STATE.editingResourceId, fileDataUrl, file.type, file.name);
+        if (typeof SyncEngine !== 'undefined' && SyncEngine.pushFile) {
+          SyncEngine.pushFile(STATE.editingResourceId, fileDataUrl, file.type, file.name).catch(() => {});
+        }
 
         STATE.resources[idx].fileName = file.name;
         STATE.resources[idx].size = file.size;
@@ -2658,6 +2661,9 @@ async function saveResourceForm(e) {
 
   const fileDataUrl = await readFileAsDataURL(file);
   await IdbResourceStore.saveFile(resId, fileDataUrl, file.type, file.name);
+  if (typeof SyncEngine !== 'undefined' && SyncEngine.pushFile) {
+    SyncEngine.pushFile(resId, fileDataUrl, file.type, file.name).catch(() => {});
+  }
 
   const newResource = {
     id: resId,
@@ -2712,6 +2718,9 @@ async function handleBatchResourceFiles(fileList) {
 
     const fileDataUrl = await readFileAsDataURL(file);
     await IdbResourceStore.saveFile(resId, fileDataUrl, file.type, file.name);
+    if (typeof SyncEngine !== 'undefined' && SyncEngine.pushFile) {
+      SyncEngine.pushFile(resId, fileDataUrl, file.type, file.name).catch(() => {});
+    }
 
     const category = '';
 
@@ -2812,6 +2821,9 @@ async function saveCreateDoc(e) {
   const dataUrl = await blobToDataUrl(fileBlob);
   if (dataUrl) {
     await IdbResourceStore.saveFile(resId, dataUrl, mimeType, fileName);
+    if (typeof SyncEngine !== 'undefined' && SyncEngine.pushFile) {
+      SyncEngine.pushFile(resId, dataUrl, mimeType, fileName).catch(() => {});
+    }
   }
 
   const newResource = {
@@ -2979,6 +2991,9 @@ async function deleteResource(resourceId) {
 
   STATE.resources = STATE.resources.filter(r => r.id !== resourceId);
   await IdbResourceStore.deleteFile(resourceId);
+  if (typeof SyncEngine !== 'undefined' && SyncEngine.deleteFile) {
+    SyncEngine.deleteFile(resourceId).catch(() => {});
+  }
 
   saveResources();
   renderResources();
@@ -3271,6 +3286,23 @@ async function openResourcePreview(resourceId) {
   }
   if (!data) {
     data = await IdbResourceStore.getFile(resourceId);
+  }
+  // If not yet available in local cache on this device, fetch seamlessly from Netlify Blobs Cloud
+  if (!data && typeof SyncEngine !== 'undefined' && SyncEngine.fetchFile) {
+    if (DOM.resourcePreviewBody) {
+      DOM.resourcePreviewBody.innerHTML = `
+        <div style="padding: 3rem; color: var(--text-dim); text-align: center;">
+          <div class="loading-spinner" style="margin: 0 auto 1rem; width: 36px; height: 36px; border: 3px solid rgba(99,102,241,0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+          Syncing document from Cloud Drive...
+        </div>
+      `;
+    }
+    data = await SyncEngine.fetchFile(resourceId);
+    if (data) {
+      memoryFileCache.set(resourceId, data);
+      res.dataUrl = data;
+      IdbResourceStore.saveFile(resourceId, data, res.mimeType, res.fileName).catch(() => {});
+    }
   }
   if (!data && res.thumbnail && typeof res.thumbnail === 'string' && res.thumbnail.startsWith('data:')) {
     data = res.thumbnail;
@@ -4507,20 +4539,48 @@ function restoreScrollPosition() {
    Silent Cloud Persistence & Synchronization (Visible to all users directly)
    ========================================================================== */
 
+const _syncedDriveFileIds = new Set();
+async function syncPendingResourceFiles() {
+  if (typeof SyncEngine === 'undefined' || !SyncEngine.pushFile) return;
+  const list = STATE.resources || [];
+  for (const r of list) {
+    if (!r || !r.id || _syncedDriveFileIds.has(r.id)) continue;
+    let data = r.dataUrl || memoryFileCache.get(r.id);
+    if (!data) {
+      data = await IdbResourceStore.getFile(r.id);
+    }
+    if (data && typeof data === 'string' && data.startsWith('data:')) {
+      _syncedDriveFileIds.add(r.id);
+      SyncEngine.pushFile(r.id, data, r.mimeType, r.fileName).catch(() => {});
+    }
+  }
+}
+
 function syncGlobally() {
   const now = Date.now();
   localStorage.setItem(STORAGE_KEYS.LAST_SYNC, now.toString());
   localStorage.setItem(STORAGE_KEYS.TOPICS_MODIFIED, 'true');
 
   if (typeof SyncEngine !== 'undefined' && SyncEngine.pushData) {
+    const resourcesToPush = (STATE.resources || []).map(r => {
+      const dataUrl = r.dataUrl || memoryFileCache.get(r.id) || '';
+      return {
+        ...r,
+        dataUrl
+      };
+    });
+
     SyncEngine.pushData({
       topics: STATE.topics,
       notes: STATE.notes,
-      resources: STATE.resources,
+      resources: resourcesToPush,
       bin: STATE.bin,
       updatedAt: now
     });
   }
+
+  // Back up any pending local files to Netlify Blobs storage in the background
+  syncPendingResourceFiles();
 }
 
 function onRemoteDataReceived(remote, source) {
@@ -4576,6 +4636,28 @@ function onRemoteDataReceived(remote, source) {
           if (localR) {
             if (!remoteR.dataUrl && localR.dataUrl) remoteR.dataUrl = localR.dataUrl;
             if (!remoteR.thumbnail && localR.thumbnail) remoteR.thumbnail = localR.thumbnail;
+          }
+
+          // If remote carries file data, cache it into memory & IndexedDB on this device
+          if (remoteR.dataUrl) {
+            memoryFileCache.set(remoteR.id, remoteR.dataUrl);
+            IdbResourceStore.saveFile(remoteR.id, remoteR.dataUrl, remoteR.mimeType, remoteR.fileName).catch(() => {});
+          } else {
+            const localData = memoryFileCache.get(remoteR.id);
+            if (localData) {
+              remoteR.dataUrl = localData;
+            } else {
+              // Prefetch file in background silently from Netlify Blobs Cloud
+              if (typeof SyncEngine !== 'undefined' && SyncEngine.fetchFile) {
+                SyncEngine.fetchFile(remoteR.id).then(fetchedData => {
+                  if (fetchedData) {
+                    memoryFileCache.set(remoteR.id, fetchedData);
+                    remoteR.dataUrl = fetchedData;
+                    IdbResourceStore.saveFile(remoteR.id, fetchedData, remoteR.mimeType, remoteR.fileName).catch(() => {});
+                  }
+                }).catch(() => {});
+              }
+            }
           }
           return remoteR;
         });
@@ -4638,6 +4720,12 @@ function initCloudSync() {
             saveResources();
           } else {
             STATE.resources = updated;
+            updated.forEach(r => {
+              if (r && r.id && r.dataUrl) {
+                memoryFileCache.set(r.id, r.dataUrl);
+                IdbResourceStore.saveFile(r.id, r.dataUrl, r.mimeType, r.fileName).catch(() => {});
+              }
+            });
             updateBadges();
             renderResources();
           }
