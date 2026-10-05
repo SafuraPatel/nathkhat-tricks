@@ -2639,6 +2639,11 @@ mark.search-highlight {
   color: var(--text-dim);
 }
 
+/* Hide text on mobile helper utility */
+.hide-mobile {
+  display: inline;
+}
+
 /* Resource Preview Modal Styles */
 .resource-preview-box {
   width: 94vw !important;
@@ -2647,6 +2652,9 @@ mark.search-highlight {
   max-height: 90vh !important;
   display: flex;
   flex-direction: column;
+  position: relative !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
 }
 
 .preview-header-info {
@@ -2654,7 +2662,8 @@ mark.search-highlight {
   align-items: center;
   gap: 0.75rem;
   min-width: 0;
-  flex: 1;
+  flex: 1 1 0%;
+  overflow: hidden;
 }
 
 .preview-type-badge {
@@ -2673,12 +2682,30 @@ mark.search-highlight {
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  flex: 1 1 0%;
+  overflow: hidden;
+}
+
+#previewModalTitle {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 100%;
 }
 
 .preview-meta-sub {
   font-size: 0.75rem;
   color: var(--text-dim);
   font-family: var(--font-mono);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-width: 100%;
 }
 
 .preview-header-actions {
@@ -2695,6 +2722,26 @@ mark.search-highlight {
   padding: 6px 12px;
   font-size: 0.82rem;
   font-weight: 700;
+}
+
+/* In-App PDF Preview Toolbar */
+.pdf-preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1.25rem;
+  background: rgba(0, 0, 0, 0.35);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.84rem;
+  gap: 0.5rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pdf-preview-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
 }
 
 .resource-preview-body {
@@ -3688,35 +3735,219 @@ html, body {
     gap: 0.5rem !important;
   }
 
-  .btn-restore, .btn-delete-perm {
+  /* Hide text on mobile helper utility */
+  .hide-mobile {
+    display: none !important;
+  }
+
+  /* Resource Preview Modal on Mobile (< 768px) */
+  .resource-preview-box {
+    width: calc(100vw - 12px) !important;
+    max-width: 100vw !important;
+    height: 94vh !important;
+    height: 94dvh !important;
+    max-height: 94vh !important;
+    max-height: 94dvh !important;
+    margin: auto !important;
+    border-radius: var(--radius-md) !important;
+    position: relative !important;
+    box-sizing: border-box !important;
+  }
+
+  .resource-preview-box .modal-header {
+    padding: 0.65rem 0.75rem !important;
+    gap: 0.4rem !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .preview-header-info {
+    gap: 0.4rem !important;
+    min-width: 0 !important;
+    flex: 1 1 0% !important;
+    overflow: hidden !important;
+  }
+
+  .preview-type-badge {
+    font-size: 0.68rem !important;
+    padding: 2px 6px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .preview-title-col {
+    min-width: 0 !important;
+    flex: 1 1 0% !important;
+    overflow: hidden !important;
+  }
+
+  #previewModalTitle {
+    font-size: 0.95rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: block !important;
+    max-width: 100% !important;
+    line-height: 1.3 !important;
+  }
+
+  .preview-meta-sub {
+    font-size: 0.68rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: block !important;
+    max-width: 100% !important;
+  }
+
+  .preview-header-actions {
+    gap: 0.3rem !important;
+    flex-shrink: 0 !important;
+  }
+
+  .preview-header-actions .btn-icon-text {
+    padding: 6px 8px !important;
+    font-size: 0.8rem !important;
+    min-width: 34px !important;
+    height: 34px !important;
+    justify-content: center !important;
+  }
+
+  .preview-header-actions .btn-modal-close {
+    width: 34px !important;
+    height: 34px !important;
+    min-width: 34px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 1.25rem !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Floating Prev / Next Navigation moved safely to bottom on mobile */
+  .btn-gdrive-preview-nav {
+    top: auto !important;
+    bottom: 0.75rem !important;
+    transform: none !important;
+    width: 38px !important;
+    height: 38px !important;
+    font-size: 1.4rem !important;
+    background: rgba(15, 23, 42, 0.88) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5) !important;
+    z-index: 100 !important;
+  }
+
+  .btn-gdrive-preview-nav.prev {
+    left: 0.75rem !important;
+  }
+
+  .btn-gdrive-preview-nav.next {
+    right: 0.75rem !important;
+  }
+
+  /* PDF Viewer Toolbar on Mobile */
+  .pdf-preview-toolbar {
+    padding: 0.45rem 0.65rem !important;
+    font-size: 0.78rem !important;
+    gap: 0.4rem !important;
+    flex-wrap: wrap !important;
+  }
+
+  .pdf-preview-toolbar .pdf-title-label {
+    display: none !important;
+  }
+
+  .pdf-preview-actions {
+    width: 100% !important;
+    display: flex !important;
+    gap: 0.4rem !important;
+  }
+
+  .pdf-preview-actions button {
     flex: 1 !important;
     justify-content: center !important;
-    padding: 7px 4px !important;
-    font-size: 0.82rem !important;
+    font-size: 0.76rem !important;
+    padding: 6px 4px !important;
+    white-space: nowrap !important;
+  }
+
+  /* In-App Document Reader on Mobile */
+  .gdrive-doc-reader {
+    padding: 0.65rem 0.4rem 4rem 0.4rem !important;
+    box-sizing: border-box !important;
+  }
+
+  .gdrive-doc-sheet {
+    padding: 1.15rem 0.85rem !important;
+    margin-bottom: 1rem !important;
+    border-radius: var(--radius-sm) !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .gdrive-doc-sheet h1 {
+    font-size: 1.15rem !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  .gdrive-doc-sheet-meta {
+    flex-wrap: wrap !important;
+    gap: 0.35rem 0.5rem !important;
+    font-size: 0.75rem !important;
+    margin-bottom: 1rem !important;
+  }
+
+  .gdrive-doc-sheet-body {
+    font-size: 0.88rem !important;
+    line-height: 1.6 !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  /* In-App Image Preview on Mobile */
+  .image-preview-full {
+    padding: 0.5rem !important;
+    max-width: 100% !important;
+    max-height: 75vh !important;
+    max-height: 75dvh !important;
   }
 }
 
+/* Extra Small Mobile Devices (<= 480px) */
+@media (max-width: 480px) {
   .modal-overlay {
-    padding: 0.35rem;
+    padding: 0.35rem !important;
   }
 
   .modal-box {
-    width: 98vw;
-    max-height: 96vh;
-    border-radius: var(--radius-sm);
+    width: 98vw !important;
+    max-height: 96vh !important;
+    border-radius: var(--radius-sm) !important;
+  }
+
+  .resource-preview-box {
+    width: calc(100vw - 8px) !important;
+    max-height: 96vh !important;
+    max-height: 96dvh !important;
   }
 
   .modal-header, .modal-footer {
-    padding: 0.75rem 0.85rem;
+    padding: 0.75rem 0.85rem !important;
   }
 
   .modal-body {
-    padding: 0.85rem;
+    padding: 0.85rem !important;
   }
 
   .form-input, .form-select, .form-textarea {
-    font-size: 16px; /* Prevents auto-zoom on iOS */
-    padding: 0.65rem 0.75rem;
+    font-size: 16px !important; /* Prevents auto-zoom on iOS */
+    padding: 0.65rem 0.75rem !important;
   }
 }
 
@@ -5672,18 +5903,121 @@ html, body {
 /* Responsive Google Drive Layout */
 @media (max-width: 900px) {
   .gdrive-app-wrapper {
-    flex-direction: column;
+    flex-direction: column !important;
+    gap: 0.85rem !important;
+    min-height: auto !important;
   }
 
   .gdrive-sidebar {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid var(--border-subtle);
-    padding-bottom: 0.75rem;
+    width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border-subtle) !important;
+    padding-bottom: 0.75rem !important;
+    gap: 0.75rem !important;
   }
 
   .gdrive-details-drawer {
     display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .gdrive-sidebar {
+    padding: 0 0 0.65rem 0 !important;
+  }
+
+  .gdrive-sidebar-brand {
+    padding: 0 !important;
+  }
+
+  .gdrive-brand-text {
+    font-size: 1.2rem !important;
+  }
+
+  .btn-gdrive-new-google {
+    padding: 0.55rem 1.1rem !important;
+    font-size: 0.88rem !important;
+  }
+
+  .gdrive-nav-list {
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: 0.4rem !important;
+    padding-bottom: 4px !important;
+    width: 100% !important;
+  }
+
+  .gdrive-nav-item {
+    flex-shrink: 0 !important;
+    width: auto !important;
+    padding: 0.45rem 0.85rem !important;
+    font-size: 0.82rem !important;
+  }
+
+  .gdrive-storage-widget {
+    display: none !important;
+  }
+
+  .gdrive-header-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.65rem !important;
+  }
+
+  .gdrive-header-actions {
+    display: flex !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+
+  .gdrive-search-pill {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0.45rem 0.95rem !important;
+    box-sizing: border-box !important;
+  }
+
+  .gdrive-sub-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.65rem !important;
+  }
+
+  .gdrive-breadcrumb-zone {
+    width: 100% !important;
+    justify-content: space-between !important;
+  }
+
+  .gdrive-toolbar-controls {
+    width: 100% !important;
+    justify-content: space-between !important;
+  }
+
+  .gdrive-chip-select {
+    flex: 1 !important;
+    max-width: calc(100% - 85px) !important;
+    font-size: 0.78rem !important;
+    padding: 5px 8px !important;
+  }
+
+  .gdrive-dropzone-bar {
+    padding: 0.55rem 0.75rem !important;
+    font-size: 0.78rem !important;
+  }
+
+  .gdrive-folders-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
+  }
+
+  .gdrive-file-card {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .gdrive-card-stage {
+    height: 120px !important;
   }
 }
 

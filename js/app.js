@@ -3223,12 +3223,12 @@ async function openResourcePreview(resourceId) {
     `;
   } else if (res.typeGroup === 'pdf' || ext === 'pdf') {
     DOM.resourcePreviewBody.innerHTML = `
-      <div style="width: 100%; height: 100%; display: flex; flex-direction: column;">
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 1.25rem; background: rgba(0,0,0,0.3); border-bottom: 1px solid var(--border-subtle); font-size: 0.84rem;">
-          <span style="color: var(--text-dim); display: flex; align-items: center; gap: 6px;">
+      <div style="width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden;">
+        <div class="pdf-preview-toolbar">
+          <span class="pdf-title-label" style="color: var(--text-dim); display: flex; align-items: center; gap: 6px;">
             <span>📄</span> In-App PDF Document Viewer
           </span>
-          <div style="display: flex; gap: 0.6rem;">
+          <div class="pdf-preview-actions">
             <button type="button" class="btn-secondary" style="padding: 4px 12px; font-size: 0.8rem;" onclick="window.open('${previewBlobUrl}', '_blank')">↗️ Fullscreen View</button>
             <button type="button" class="btn-primary" style="padding: 4px 12px; font-size: 0.8rem;" onclick="downloadResource('${res.id}')">⬇️ Download PDF</button>
           </div>
@@ -3250,8 +3250,8 @@ async function openResourcePreview(resourceId) {
     DOM.resourcePreviewBody.innerHTML = `
       <div class="gdrive-doc-reader">
         <div class="gdrive-doc-sheet">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem;">
-            <h1>${escapeHtml(res.title)}</h1>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; gap: 0.5rem; flex-wrap: wrap;">
+            <h1 style="min-width: 0; flex: 1; margin: 0; word-break: break-word; overflow-wrap: anywhere;">${escapeHtml(res.title)}</h1>
             <button type="button" class="btn-secondary" style="padding: 4px 12px; font-size: 0.8rem; flex-shrink: 0;" id="previewCopyDocBtn">📋 Copy</button>
           </div>
           <div class="gdrive-doc-sheet-meta">
@@ -3273,7 +3273,7 @@ async function openResourcePreview(resourceId) {
     DOM.resourcePreviewBody.innerHTML = `
       <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; gap: 1.5rem; padding: 2rem;">
         <span style="font-size: 4rem;">🎵</span>
-        <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-main);">${escapeHtml(res.title)}</h3>
+        <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-main); text-align: center; word-break: break-word;">${escapeHtml(res.title)}</h3>
         <audio controls src="${data || ''}" style="width: 100%; max-width: 500px;"></audio>
       </div>
     `;
@@ -3288,14 +3288,14 @@ async function openResourcePreview(resourceId) {
       <div class="gdrive-doc-reader">
         <div class="gdrive-doc-sheet" style="text-align: center; max-width: 620px;">
           <div style="font-size: 3.5rem; margin-bottom: 1rem;">${fileIcon}</div>
-          <h1 style="border-bottom: none; margin-bottom: 0.5rem;">${escapeHtml(res.title)}</h1>
-          <div class="gdrive-doc-sheet-meta" style="justify-content: center;">
-            <span>${escapeHtml(res.fileName || 'file')}</span>
+          <h1 style="border-bottom: none; margin-bottom: 0.5rem; word-break: break-word; overflow-wrap: anywhere;">${escapeHtml(res.title)}</h1>
+          <div class="gdrive-doc-sheet-meta" style="justify-content: center; flex-wrap: wrap;">
+            <span style="word-break: break-all;">${escapeHtml(res.fileName || 'file')}</span>
             <span>• ${res.sizeFormatted || formatFileSize(res.size)}</span>
           </div>
-          ${res.description ? `<p style="color: var(--text-muted); line-height: 1.6; text-align: left; background: rgba(0,0,0,0.06); padding: 1.25rem; border-radius: 8px; margin: 1.25rem 0;">${escapeHtml(res.description)}</p>` : ''}
-          ${res.linkUrl ? `<div style="margin: 1.5rem 0;"><a href="${res.linkUrl}" target="_blank" rel="noopener" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 0.75rem 1.5rem; text-decoration: none;"><span>🔗</span> Open Link in New Tab</a></div>` : ''}
-          <div style="display: flex; justify-content: center; gap: 0.75rem; margin-top: 1.5rem;">
+          ${res.description ? `<p style="color: var(--text-muted); line-height: 1.6; text-align: left; background: rgba(0,0,0,0.06); padding: 1.25rem; border-radius: 8px; margin: 1.25rem 0; word-break: break-word; overflow-wrap: anywhere;">${escapeHtml(res.description)}</p>` : ''}
+          ${res.linkUrl ? `<div style="margin: 1.5rem 0;"><a href="${res.linkUrl}" target="_blank" rel="noopener" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 0.75rem 1.5rem; text-decoration: none; word-break: break-all; max-width: 100%;"><span>🔗</span> Open Link in New Tab</a></div>` : ''}
+          <div style="display: flex; justify-content: center; gap: 0.75rem; margin-top: 1.5rem; flex-wrap: wrap;">
             <button type="button" class="btn-primary" onclick="downloadResource('${res.id}')">
               <span>⬇️</span> Download File
             </button>
@@ -3684,6 +3684,15 @@ function setupResourceEventListeners() {
     DOM.closeResourcePreviewBtn.addEventListener('click', () => closeResourcePreview(false));
   }
 
+  // Allow clicking on modal overlay backdrop to close preview
+  if (DOM.resourcePreviewModal) {
+    DOM.resourcePreviewModal.addEventListener('click', (e) => {
+      if (e.target === DOM.resourcePreviewModal) {
+        closeResourcePreview(false);
+      }
+    });
+  }
+
   // Google Drive Preview Modal Navigation (Prev / Next & Keyboard Shortcuts)
   if (DOM.previewPrevBtn) {
     DOM.previewPrevBtn.addEventListener('click', (e) => {
@@ -3705,6 +3714,8 @@ function setupResourceEventListeners() {
         navigateResourcePreview(-1);
       } else if (e.key === 'ArrowRight') {
         navigateResourcePreview(1);
+      } else if (e.key === 'Escape') {
+        closeResourcePreview(false);
       }
     }
   });
