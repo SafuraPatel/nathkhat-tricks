@@ -696,6 +696,24 @@ function setPaperFilter(paper) {
   if (DOM.resourcesView) renderResources();
 }
 
+function getStarredResourceCount() {
+  const existingIds = new Set((STATE.resources || []).map(r => r.id));
+  if (Array.isArray(STATE.starredResourceIds)) {
+    STATE.starredResourceIds = STATE.starredResourceIds.filter(id => existingIds.has(id));
+  } else {
+    STATE.starredResourceIds = [];
+  }
+  // Sync resource.starred property with STATE.starredResourceIds
+  (STATE.resources || []).forEach(r => {
+    if (r.starred && !STATE.starredResourceIds.includes(r.id)) {
+      STATE.starredResourceIds.push(r.id);
+    } else if (STATE.starredResourceIds.includes(r.id)) {
+      r.starred = true;
+    }
+  });
+  return (STATE.resources || []).filter(r => r.starred || STATE.starredResourceIds.includes(r.id)).length;
+}
+
 function updateBadges() {
   const total = STATE.topics.length;
   const p1Count = STATE.topics.filter(t => t.paper === 'P1').length;
@@ -714,6 +732,13 @@ function updateBadges() {
   if (DOM.indexCountBadge) DOM.indexCountBadge.textContent = total;
   if (DOM.quickStatsText) {
     DOM.quickStatsText.textContent = `${total} Topics Ready • P1: ${p1Count} | P2: ${p2Count}`;
+  }
+
+  // Live Starred Files count in Google Drive navigation
+  if (DOM.gdriveStarredCount) {
+    const starCount = getStarredResourceCount();
+    DOM.gdriveStarredCount.textContent = starCount;
+    DOM.gdriveStarredCount.style.display = starCount > 0 ? 'inline-block' : 'none';
   }
 }
 
@@ -1926,7 +1951,8 @@ function getFilteredDriveResources() {
 
   // 1. Filter by Active Drive Navigation (My Drive, Starred, Recent)
   if (STATE.activeDriveNav === 'starred') {
-    filtered = filtered.filter(r => starredList.includes(r.id));
+    const starredSet = new Set(starredList);
+    filtered = filtered.filter(r => r.starred || starredSet.has(r.id));
   } else if (STATE.activeDriveNav === 'recent') {
     filtered.sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
   }
@@ -1979,8 +2005,9 @@ function renderResources() {
   // Update Left Navigation Badges & Storage
   if (DOM.gdriveNavCount) DOM.gdriveNavCount.textContent = totalCount;
   if (DOM.gdriveStarredCount) {
-    DOM.gdriveStarredCount.textContent = starredList.length;
-    DOM.gdriveStarredCount.style.display = starredList.length > 0 ? 'inline-block' : 'none';
+    const starCount = getStarredResourceCount();
+    DOM.gdriveStarredCount.textContent = starCount;
+    DOM.gdriveStarredCount.style.display = starCount > 0 ? 'inline-block' : 'none';
   }
   if (DOM.gdriveStorageFill) {
     const pct = Math.min(100, Math.max(3, Math.round((totalBytes / (1024 * 1024 * 15)) * 100)));
@@ -2470,19 +2497,27 @@ function hideContextMenu() {
 }
 
 function toggleStarResource(resourceId) {
+  const res = (STATE.resources || []).find(r => r.id === resourceId);
   if (!STATE.starredResourceIds) STATE.starredResourceIds = [];
   const idx = STATE.starredResourceIds.indexOf(resourceId);
+
   if (idx !== -1) {
     STATE.starredResourceIds.splice(idx, 1);
+    if (res) res.starred = false;
     showToast('Removed from Starred', 'info');
   } else {
     STATE.starredResourceIds.push(resourceId);
+    if (res) res.starred = true;
     showToast('Added to Starred ⭐', 'success');
   }
+
   try {
     localStorage.setItem(STORAGE_KEYS.STARRED_RESOURCES, JSON.stringify(STATE.starredResourceIds));
   } catch (err) {}
+  saveResources();
+  updateBadges();
   renderResources();
+  syncGlobally();
 }
 
 /* ==========================================================================
@@ -2990,6 +3025,12 @@ async function deleteResource(resourceId) {
   markResourceDeleted(resourceId);
 
   STATE.resources = STATE.resources.filter(r => r.id !== resourceId);
+  if (STATE.starredResourceIds) {
+    STATE.starredResourceIds = STATE.starredResourceIds.filter(id => id !== resourceId);
+    try {
+      localStorage.setItem(STORAGE_KEYS.STARRED_RESOURCES, JSON.stringify(STATE.starredResourceIds));
+    } catch (err) {}
+  }
   await IdbResourceStore.deleteFile(resourceId);
   if (typeof SyncEngine !== 'undefined' && SyncEngine.deleteFile) {
     SyncEngine.deleteFile(resourceId).catch(() => {});
@@ -3231,6 +3272,102 @@ async function seedDefaultFilesIntoIdb() {
    ========================================================================== */
 
 /**
+ * Universal PDF Renderer using PDF.js:
+ * Renders all pages into high-DPI HTML5 canvas elements.
+ * Works with 100% fidelity on small screens (mobile phones, tablets) and large screens (desktop).
+ */
+async function renderPdfDocumentOnScreen(blob, res) {
+  if (!DOM.resourcePreviewBody) return;
+
+  const cleanTitle = escapeHtml(res.fileName || res.title);
+  DOM.resourcePreviewBody.innerHTML = `
+    <div class="pdf-viewer-container">
+      <div class="pdf-preview-toolbar">
+        <span class="pdf-title-label" style="color: var(--text-dim); display: flex; align-items: center; gap: 6px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          <span>📄</span> ${cleanTitle}
+        </span>
+        <div class="pdf-preview-actions">
+          <span class="pdf-page-count-badge" id="pdfPageIndicator" style="font-size: 0.78rem; color: var(--text-muted); padding: 4px 8px; border-radius: 4px; background: rgba(255,255,255,0.06); white-space: nowrap;">Loading...</span>
+          <button type="button" class="btn-secondary" style="padding: 4px 12px; font-size: 0.8rem;" id="pdfOpenTabBtn">↗️ Full View</button>
+          <button type="button" class="btn-primary" style="padding: 4px 12px; font-size: 0.8rem;" onclick="downloadResource('${res.id}')">⬇️ Download</button>
+        </div>
+      </div>
+      <div class="pdf-canvas-scroll-wrapper" id="pdfCanvasList">
+        <div style="padding: 2.5rem 1rem; color: var(--text-dim); text-align: center;">
+          <div class="loading-spinner" style="margin: 0 auto 0.75rem; width: 32px; height: 32px; border: 3px solid rgba(99,102,241,0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+          Rendering document pages...
+        </div>
+      </div>
+    </div>
+  `;
+
+  let blobUrl = '';
+  try {
+    blobUrl = URL.createObjectURL(blob);
+  } catch (e) {}
+
+  const openTabBtn = DOM.resourcePreviewBody.querySelector('#pdfOpenTabBtn');
+  if (openTabBtn && blobUrl) {
+    openTabBtn.onclick = () => window.open(blobUrl, '_blank');
+  }
+
+  // Universal client-side Canvas rendering via PDF.js (works 100% on iOS, Android, and Desktop)
+  if (typeof pdfjsLib !== 'undefined') {
+    try {
+      if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'js/pdf.worker.min.js';
+      }
+
+      const arrayBuffer = await blob.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdf = await loadingTask.promise;
+      const numPages = pdf.numPages;
+
+      const pageIndicator = DOM.resourcePreviewBody.querySelector('#pdfPageIndicator');
+      if (pageIndicator) pageIndicator.textContent = `${numPages} page${numPages === 1 ? '' : 's'}`;
+
+      const canvasContainer = DOM.resourcePreviewBody.querySelector('#pdfCanvasList');
+      if (!canvasContainer) return;
+      canvasContainer.innerHTML = '';
+
+      for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const containerWidth = canvasContainer.clientWidth || window.innerWidth || 600;
+        const targetWidth = Math.max(280, Math.min(containerWidth - 28, 860));
+        const unscaledViewport = page.getViewport({ scale: 1 });
+        const displayScale = targetWidth / unscaledViewport.width;
+        const dpr = Math.min(window.devicePixelRatio || 1, 2.5); // Sharp vector rendering
+        const renderViewport = page.getViewport({ scale: displayScale * dpr });
+
+        const pageCard = document.createElement('div');
+        pageCard.className = 'pdf-page-card';
+
+        const canvas = document.createElement('canvas');
+        canvas.height = renderViewport.height;
+        canvas.width = renderViewport.width;
+        canvas.style.width = `${Math.round(renderViewport.width / dpr)}px`;
+        canvas.style.height = 'auto';
+
+        const ctx = canvas.getContext('2d', { alpha: false });
+        await page.render({ canvasContext: ctx, viewport: renderViewport }).promise;
+
+        pageCard.appendChild(canvas);
+        canvasContainer.appendChild(pageCard);
+      }
+      return;
+    } catch (err) {
+      console.warn('PDF.js rendering exception, falling back to browser iframe:', err);
+    }
+  }
+
+  // Fallback if PDF.js is unavailable
+  const canvasContainer = DOM.resourcePreviewBody.querySelector('#pdfCanvasList');
+  if (canvasContainer && blobUrl) {
+    canvasContainer.innerHTML = `<iframe class="pdf-preview-iframe" src="${blobUrl}#toolbar=1" title="${cleanTitle}"></iframe>`;
+  }
+}
+
+/**
  * Opens any document directly on screen in the viewer without downloading.
  */
 async function openResourceDirectly(resourceId) {
@@ -3341,23 +3478,21 @@ async function openResourcePreview(resourceId) {
     DOM.previewDownloadBtn.onclick = () => downloadResource(resourceId);
   }
 
-  // 1. PDF Documents: Render authentic uploaded PDF directly inside iframe on screen
+  // 1. PDF Documents: Render authentic uploaded PDF directly on screen (flawless on mobile and desktop)
   if (res.typeGroup === 'pdf' || ext === 'pdf') {
-    if (previewBlobUrl) {
-      DOM.resourcePreviewBody.innerHTML = `
-        <div style="width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden;">
-          <div class="pdf-preview-toolbar">
-            <span class="pdf-title-label" style="color: var(--text-dim); display: flex; align-items: center; gap: 6px;">
-              <span>📄</span> ${escapeHtml(res.fileName || res.title)}
-            </span>
-            <div class="pdf-preview-actions">
-              <button type="button" class="btn-secondary" style="padding: 4px 12px; font-size: 0.8rem;" onclick="window.open('${previewBlobUrl}', '_blank')">↗️ Open in Tab</button>
-              <button type="button" class="btn-primary" style="padding: 4px 12px; font-size: 0.8rem;" onclick="downloadResource('${res.id}')">⬇️ Download PDF</button>
-            </div>
-          </div>
-          <iframe class="pdf-preview-iframe" src="${previewBlobUrl}#toolbar=1" title="${escapeHtml(res.title)}" style="flex: 1; width: 100%; height: calc(100% - 42px); border: none; background: #ffffff;"></iframe>
-        </div>
-      `;
+    let pdfBlob = null;
+    if (data && typeof data === 'string' && data.startsWith('data:')) {
+      try { pdfBlob = dataUrlToBlob(data); } catch (e) {}
+    }
+    if (!pdfBlob && previewBlobUrl) {
+      try {
+        pdfBlob = await fetch(previewBlobUrl).then(r => r.blob()).catch(() => null);
+      } catch (e) {}
+    }
+
+    if (pdfBlob) {
+      await renderPdfDocumentOnScreen(pdfBlob, res);
+      return;
     } else {
       DOM.resourcePreviewBody.innerHTML = `
         <div style="padding: 3rem 1.5rem; text-align: center; color: var(--text-muted); max-width: 520px; margin: 0 auto;">
@@ -3368,8 +3503,8 @@ async function openResourcePreview(resourceId) {
           <button type="button" class="btn-primary" onclick="downloadResource('${res.id}')">⬇️ Download PDF</button>
         </div>
       `;
+      return;
     }
-    return;
   }
 
   // 2. Word Documents (.docx): Render authentic Word document on screen via Mammoth.js
@@ -3560,7 +3695,13 @@ function setupResourceEventListeners() {
     STATE.customFolders = [];
     const storedStarred = localStorage.getItem(STORAGE_KEYS.STARRED_RESOURCES);
     if (storedStarred) {
-      STATE.starredResourceIds = JSON.parse(storedStarred);
+      try {
+        const parsed = JSON.parse(storedStarred);
+        const validIds = new Set((STATE.resources || []).map(r => r.id));
+        STATE.starredResourceIds = Array.isArray(parsed) ? parsed.filter(id => validIds.has(id)) : [];
+      } catch (err) {
+        STATE.starredResourceIds = [];
+      }
     }
   } catch (err) {}
 
