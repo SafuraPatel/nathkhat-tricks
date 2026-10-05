@@ -329,6 +329,9 @@ const DOM = {
 function initApp() {
   try {
     loadStoredData();
+    if (typeof IdbResourceStore !== 'undefined' && IdbResourceStore.preloadMemoryCache) {
+      IdbResourceStore.preloadMemoryCache().catch(() => {});
+    }
     setupEventListeners();
     applyTheme(STATE.theme);
     updateBadges();
@@ -527,9 +530,11 @@ async function recoverStoredResourcesFromIdb() {
           unit: '',
           description: '',
           thumbnail: (group === 'image' && entry.data) ? entry.data : null,
+          dataUrl: (entry.data && typeof entry.data === 'string' && entry.data.length < 2 * 1024 * 1024) ? entry.data : '',
           createdAt: entry.updatedAt || Date.now(),
           updatedAt: entry.updatedAt || Date.now()
         };
+        if (entry.data) memoryFileCache.set(entry.id, entry.data);
         STATE.resources.unshift(recovered);
         knownIds.add(entry.id);
         modified = true;
@@ -563,9 +568,9 @@ function saveResources() {
     localStorage.setItem(STORAGE_KEYS.RESOURCES, JSON.stringify(STATE.resources));
   } catch (e) {
     try {
-      // In case localStorage quota limit is reached, strip heavy thumbnails so file metadata is never lost
+      // In case localStorage quota limit is reached, strip heavy dataUrl & thumbnails so file metadata is never lost
       const lightResources = STATE.resources.map(r => {
-        const { thumbnail, ...rest } = r;
+        const { thumbnail, dataUrl, ...rest } = r;
         return rest;
       });
       localStorage.setItem(STORAGE_KEYS.RESOURCES, JSON.stringify(lightResources));
@@ -1682,6 +1687,9 @@ function fallbackCopyText(text) {
    SECTION: Study Resources & Files Engine (PDFs, Images, Documents, Any File)
    ========================================================================== */
 
+/* In-Memory Instant Synchronous File Cache for 0ms Direct Opening */
+const memoryFileCache = new Map();
+
 const IdbResourceStore = {
   dbPromise: null,
 
@@ -1693,14 +1701,23 @@ const IdbResourceStore = {
           resolve(null);
           return;
         }
-        const req = indexedDB.open('NathKhat_Resources_DB', 1);
+        const req = indexedDB.open('NathKhat_Resources_DB');
         req.onupgradeneeded = (e) => {
           const db = e.target.result;
           if (!db.objectStoreNames.contains('files')) {
             db.createObjectStore('files', { keyPath: 'id' });
           }
         };
-        req.onsuccess = (e) => resolve(e.target.result);
+        req.onsuccess = (e) => {
+          const db = e.target.result;
+          db.onversionchange = () => {
+            try { db.close(); } catch (err) {}
+          };
+          resolve(db);
+        };
+        req.onblocked = () => {
+          console.warn('NathKhat_Resources_DB blocked');
+        };
         req.onerror = () => resolve(null);
       } catch (err) {
         resolve(null);
@@ -1709,12 +1726,32 @@ const IdbResourceStore = {
     return this.dbPromise;
   },
 
+  async preloadMemoryCache() {
+    try {
+      const entries = await this.getAllEntries();
+      if (Array.isArray(entries)) {
+        entries.forEach(entry => {
+          if (entry && entry.id && entry.data) {
+            memoryFileCache.set(entry.id, entry.data);
+          }
+        });
+      }
+    } catch (e) {}
+  },
+
   async saveFile(id, fileData, mimeType, name) {
+    if (!id || !fileData) return false;
+    memoryFileCache.set(id, fileData);
+    try { sessionStorage.setItem('nk_file_' + id, fileData); } catch (e) {}
+    try {
+      if (typeof fileData === 'string' && fileData.length < 1500000) {
+        localStorage.setItem('nk_file_' + id, fileData);
+      }
+    } catch (e) {}
+
     const db = await this.getDB();
-    if (!db) {
-      try { sessionStorage.setItem('nk_file_' + id, fileData); } catch (e) {}
-      return;
-    }
+    if (!db) return true;
+
     return new Promise((resolve) => {
       try {
         const tx = db.transaction('files', 'readwrite');
@@ -1729,10 +1766,34 @@ const IdbResourceStore = {
   },
 
   async getFile(id) {
-    const db = await this.getDB();
-    if (!db) {
-      try { return sessionStorage.getItem('nk_file_' + id); } catch (e) { return null; }
+    if (!id) return null;
+    if (memoryFileCache.has(id)) {
+      return memoryFileCache.get(id);
     }
+    try {
+      const sess = sessionStorage.getItem('nk_file_' + id);
+      if (sess) {
+        memoryFileCache.set(id, sess);
+        return sess;
+      }
+    } catch (e) {}
+    try {
+      const loc = localStorage.getItem('nk_file_' + id);
+      if (loc) {
+        memoryFileCache.set(id, loc);
+        return loc;
+      }
+    } catch (e) {}
+
+    const stateRes = (STATE.resources || []).find(r => r.id === id);
+    if (stateRes && stateRes.dataUrl) {
+      memoryFileCache.set(id, stateRes.dataUrl);
+      return stateRes.dataUrl;
+    }
+
+    const db = await this.getDB();
+    if (!db) return null;
+
     return new Promise((resolve) => {
       try {
         const tx = db.transaction('files', 'readonly');
@@ -1740,6 +1801,7 @@ const IdbResourceStore = {
         const req = store.get(id);
         req.onsuccess = () => {
           if (req.result && req.result.data) {
+            memoryFileCache.set(id, req.result.data);
             resolve(req.result.data);
           } else {
             resolve(null);
@@ -1753,11 +1815,12 @@ const IdbResourceStore = {
   },
 
   async deleteFile(id) {
+    memoryFileCache.delete(id);
+    try { sessionStorage.removeItem('nk_file_' + id); } catch (e) {}
+    try { localStorage.removeItem('nk_file_' + id); } catch (e) {}
     const db = await this.getDB();
-    if (!db) {
-      try { sessionStorage.removeItem('nk_file_' + id); } catch (e) {}
-      return;
-    }
+    if (!db) return;
+
     return new Promise((resolve) => {
       try {
         const tx = db.transaction('files', 'readwrite');
@@ -2033,7 +2096,7 @@ function renderResources() {
 
       tr.innerHTML = `
         <td>
-          <div class="gdrive-row-name-cell" title="Click to open file in Drive preview">
+          <div class="gdrive-row-name-cell" title="Click to open document directly">
             <span class="gdrive-row-icon">${icon}</span>
             <div style="overflow: hidden; max-width: 520px;">
               <div class="gdrive-row-name-text">${highlightedTitle}</div>
@@ -2046,7 +2109,7 @@ function renderResources() {
         <td style="font-size: 0.8rem; color: var(--text-dim); white-space: nowrap;">${dateStr}</td>
         <td style="text-align: right;">
           <div class="gdrive-row-actions" style="justify-content: flex-end;">
-            <button type="button" class="btn-gdrive-action action-preview res-preview-btn" title="Preview file" aria-label="Preview">👁️</button>
+            <button type="button" class="btn-gdrive-action action-preview res-preview-btn" title="Open document directly" aria-label="Open">👁️</button>
             <button type="button" class="btn-gdrive-action action-download res-download-btn" title="Download file" aria-label="Download">⬇️</button>
             <button type="button" class="btn-gdrive-action res-star-btn" title="${isStarred ? 'Remove from Starred' : 'Add to Starred'}">${isStarred ? '⭐' : '☆'}</button>
             <button type="button" class="btn-gdrive-action res-menu-btn" title="More actions">⋮</button>
@@ -2054,16 +2117,16 @@ function renderResources() {
         </td>
       `;
 
-      // Single click directly opens the file preview like in Drive!
+      // Single click directly opens the document without interruption!
       tr.addEventListener('click', (e) => {
         if (e.target.closest('button')) return;
         selectDriveFile(res.id);
-        openResourcePreview(res.id);
+        openResourceDirectly(res.id);
       });
 
-      // Double-click also opens preview
+      // Double-click also opens directly
       tr.addEventListener('dblclick', () => {
-        openResourcePreview(res.id);
+        openResourceDirectly(res.id);
       });
 
       // Right-click Google Drive context menu
@@ -2073,7 +2136,7 @@ function renderResources() {
 
       tr.querySelector('.res-preview-btn').addEventListener('click', (e) => {
         e.stopPropagation();
-        openResourcePreview(res.id);
+        openResourceDirectly(res.id);
       });
 
       tr.querySelector('.res-download-btn').addEventListener('click', (e) => {
@@ -2143,13 +2206,13 @@ function renderResources() {
     if (res.typeGroup === 'image') {
       const imgSrc = res.thumbnail || res.dataUrl || '';
       stageHtml = `
-        <div class="gdrive-card-stage" title="Click to view image in full preview">
+        <div class="gdrive-card-stage" title="Click to open image directly">
           <img src="${imgSrc || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\'><text y=\'50\' font-size=\'30\'>🖼️</text></svg>'}" alt="${escapeHtml(res.title)}" />
         </div>
       `;
     } else if (res.typeGroup === 'pdf') {
       stageHtml = `
-        <div class="gdrive-card-stage" title="Click to preview PDF document directly in-app">
+        <div class="gdrive-card-stage" title="Click to open PDF directly in browser">
           <div class="gdrive-pdf-mockup">
             <span class="gdrive-pdf-mockup-icon">📄</span>
             <span class="gdrive-pdf-mockup-text">${escapeHtml(res.title.substring(0, 32))}</span>
@@ -2158,7 +2221,7 @@ function renderResources() {
       `;
     } else if (res.typeGroup === 'doc' || res.extension === 'md' || res.extension === 'txt') {
       stageHtml = `
-        <div class="gdrive-card-stage" title="Click to read note / doc directly in-app">
+        <div class="gdrive-card-stage" title="Click to open document directly">
           <div class="gdrive-doc-mockup">
             <span style="font-size: 2.3rem;">📝</span>
             <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted);">${escapeHtml(res.title.substring(0, 32))}</span>
@@ -2167,7 +2230,7 @@ function renderResources() {
       `;
     } else {
       stageHtml = `
-        <div class="gdrive-card-stage" title="Click to preview file">
+        <div class="gdrive-card-stage" title="Click to open document directly">
           <div style="text-align: center; color: var(--text-dim);">
             <span style="font-size: 2.5rem;">${fileIcon}</span>
           </div>
@@ -2197,16 +2260,16 @@ function renderResources() {
       </div>
     `;
 
-    // 1-Click: Directly open file preview like Google Drive!
+    // 1-Click: Directly open document without any interruption!
     card.addEventListener('click', (e) => {
       if (e.target.closest('.res-menu-btn')) return;
       selectDriveFile(res.id);
-      openResourcePreview(res.id);
+      openResourceDirectly(res.id);
     });
 
-    // Double-click also opens preview
+    // Double-click also opens directly
     card.addEventListener('dblclick', () => {
-      openResourcePreview(res.id);
+      openResourceDirectly(res.id);
     });
 
     // Right-click: Custom Google Drive context menu
@@ -2299,7 +2362,7 @@ function renderDetailsPane(resourceId) {
     </div>
 
     <div style="display: flex; gap: 0.5rem;">
-      <button type="button" class="btn-primary" style="flex: 1; padding: 6px 12px; font-size: 0.82rem;" id="panePreviewBtn">👁️ Preview</button>
+      <button type="button" class="btn-primary" style="flex: 1; padding: 6px 12px; font-size: 0.82rem;" id="panePreviewBtn">🚀 Open</button>
       <button type="button" class="btn-secondary" style="flex: 1; padding: 6px 12px; font-size: 0.82rem;" id="paneDownloadBtn">⬇️ Download</button>
     </div>
 
@@ -2346,7 +2409,7 @@ function renderDetailsPane(resourceId) {
 
   // Bind Pane Actions
   const pPre = DOM.gdriveDetailsBody.querySelector('#panePreviewBtn');
-  if (pPre) pPre.addEventListener('click', () => openResourcePreview(res.id));
+  if (pPre) pPre.addEventListener('click', () => openResourceDirectly(res.id));
 
   const pDown = DOM.gdriveDetailsBody.querySelector('#paneDownloadBtn');
   if (pDown) pDown.addEventListener('click', () => downloadResource(res.id));
@@ -2388,7 +2451,7 @@ function showContextMenu(e, resourceId) {
   menu.style.top = `${posY}px`;
 
   // Bind Context Menu actions
-  if (DOM.ctxPreview) DOM.ctxPreview.onclick = () => { hideContextMenu(); openResourcePreview(resourceId); };
+  if (DOM.ctxPreview) DOM.ctxPreview.onclick = () => { hideContextMenu(); openResourceDirectly(resourceId); };
   if (DOM.ctxDownload) DOM.ctxDownload.onclick = () => { hideContextMenu(); downloadResource(resourceId); };
   if (DOM.ctxEdit) DOM.ctxEdit.onclick = () => { hideContextMenu(); openEditResourceModal(resourceId); };
   if (DOM.ctxStar) DOM.ctxStar.onclick = () => { hideContextMenu(); toggleStarResource(resourceId); };
@@ -2559,6 +2622,7 @@ async function saveResourceForm(e) {
         STATE.resources[idx].extension = ext;
         STATE.resources[idx].typeGroup = group;
         if (thumb) STATE.resources[idx].thumbnail = thumb;
+        STATE.resources[idx].dataUrl = file.size <= 2 * 1024 * 1024 ? fileDataUrl : '';
       }
 
       saveResources();
@@ -2605,6 +2669,7 @@ async function saveResourceForm(e) {
     unit,
     description: desc,
     thumbnail: thumb,
+    dataUrl: file.size <= 2 * 1024 * 1024 ? fileDataUrl : '',
     createdAt: Date.now(),
     updatedAt: Date.now()
   };
@@ -2660,6 +2725,7 @@ async function handleBatchResourceFiles(fileList) {
       unit: '',
       description: '',
       thumbnail: thumb,
+      dataUrl: file.size <= 2 * 1024 * 1024 ? fileDataUrl : '',
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
@@ -2757,6 +2823,7 @@ async function saveCreateDoc(e) {
     category,
     unit: 'Study Note',
     description: content.substring(0, 160),
+    dataUrl: dataUrl || '',
     createdAt: Date.now(),
     updatedAt: Date.now()
   };
@@ -2769,8 +2836,8 @@ async function saveCreateDoc(e) {
   closeCreateDocModal();
   showToast(`Created document: "${title}"`, 'success');
 
-  // Immediately preview the newly created document!
-  openResourcePreview(resId);
+  // Immediately open the newly created document directly!
+  openResourceDirectly(resId);
 }
 
 // ----------------------------------------------------------------------------
@@ -3141,8 +3208,95 @@ async function seedDefaultFilesIntoIdb() {
 }
 
 /* ==========================================================================
-   Google Drive File Previewer (In-App Preview Without Downloading)
+   Direct Document Opener & Google Drive File Previewer
    ========================================================================== */
+
+/**
+ * Directly opens an authentic uploaded document without any modal interruption.
+ * - PDFs, images, text, and URLs open in a clean dedicated browser tab with native controls.
+ * - Documents (Word/Excel/PowerPoint/Zip) trigger direct native opening/download with real data.
+ */
+async function openResourceDirectly(resourceId) {
+  const res = STATE.resources.find(r => r.id === resourceId);
+  if (!res) return;
+
+  // 1. External Web Link -> Open immediately in new tab
+  if (res.linkUrl) {
+    window.open(res.linkUrl, '_blank', 'noopener,noreferrer');
+    return;
+  }
+
+  const ext = (res.extension || (res.fileName && res.fileName.includes('.') ? res.fileName.split('.').pop() : '')).toLowerCase();
+  const cleanBaseName = (res.title || res.fileName || 'document').replace(/[^a-zA-Z0-9_\-\. ]/g, '_').trim();
+  let fileName = res.fileName || cleanBaseName;
+
+  // 2. Fetch the authentic data from all tiers
+  let data = memoryFileCache.get(resourceId) || res.dataUrl || res.fileData;
+  if (!data) {
+    try { data = sessionStorage.getItem('nk_file_' + resourceId); } catch (e) {}
+  }
+  if (!data) {
+    try { data = localStorage.getItem('nk_file_' + resourceId); } catch (e) {}
+  }
+  if (!data) {
+    data = await IdbResourceStore.getFile(resourceId);
+  }
+  if (!data && res.thumbnail && typeof res.thumbnail === 'string' && res.thumbnail.startsWith('data:')) {
+    data = res.thumbnail;
+  }
+
+  // 3. NathKhat-created Study Note without attached binary file
+  if (!data && res.typeGroup === 'doc' && res.description && (!res.fileName || res.fileName.endsWith('.note'))) {
+    openResourcePreview(resourceId);
+    return;
+  }
+
+  // 4. If we have authentic base64 file data
+  if (data && typeof data === 'string' && data.startsWith('data:')) {
+    try {
+      const blob = dataUrlToBlob(data);
+      const blobUrl = URL.createObjectURL(blob);
+
+      // A) Viewable in browser tab: PDF, Image, Web/Text/SVG
+      const isBrowserViewable = 
+        res.typeGroup === 'pdf' || 
+        ext === 'pdf' || 
+        res.typeGroup === 'image' || 
+        ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'bmp', 'ico'].includes(ext) ||
+        ext === 'txt' || 
+        ext === 'html' || 
+        ext === 'md';
+
+      if (isBrowserViewable) {
+        const opened = window.open(blobUrl, '_blank');
+        if (!opened || opened.closed || typeof opened.closed === 'undefined') {
+          // Fallback if popup blocker intercepted
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            try { a.remove(); } catch (err) {}
+          }, 1000);
+        }
+        return;
+      }
+
+      // B) Native Office / Desktop Apps: Word (.docx, .doc), Excel (.xlsx, .csv), PPT (.pptx), Zip, etc.
+      // Launch/download directly with authentic binary bytes so Word/Excel opens it cleanly without interruption
+      downloadBlob(blob, fileName);
+      showToast(`Opening "${fileName}"...`, 'info');
+      return;
+    } catch (err) {
+      console.warn('Error opening blobUrl directly, falling back to download:', err);
+    }
+  }
+
+  // 5. Fallback if data was not in storage (e.g. seed data or synced placeholder)
+  downloadResource(resourceId);
+}
 
 async function openResourcePreview(resourceId) {
   const res = STATE.resources.find(r => r.id === resourceId);
@@ -3186,9 +3340,7 @@ async function openResourcePreview(resourceId) {
   } else if (res.typeGroup === 'pdf' || ext === 'pdf') {
     const blob = generateValidPdfBlob(res.title, res.description || 'Study notes & revision guide.', res);
     previewBlobUrl = URL.createObjectURL(blob);
-    blobToDataUrl(blob).then(dUrl => {
-      if (dUrl) IdbResourceStore.saveFile(res.id, dUrl, 'application/pdf', res.fileName);
-    });
+    // Never overwrite authentic IndexedDB files with dummy placeholder PDFs
   } else if (res.typeGroup === 'image' || ext === 'svg') {
     const svgXml = (data && data.includes('<svg')) ? data.replace(/^data:image\/svg\+xml;utf8,/, '') : (res.thumbnail && res.thumbnail.includes('<svg') ? res.thumbnail.replace(/^data:image\/svg\+xml;utf8,/, '') : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="100%" height="100%"><rect width="600" height="400" fill="#0f172a"/><text x="300" y="180" fill="#f8fafc" font-size="20" font-weight="bold" font-family="sans-serif" text-anchor="middle">${escapeHtml(res.title)}</text><text x="300" y="220" fill="#94a3b8" font-size="14" font-family="sans-serif" text-anchor="middle">NathKhat Study Diagram</text></svg>`);
     const blob = new Blob([svgXml], { type: 'image/svg+xml;charset=utf-8' });
@@ -3234,6 +3386,30 @@ async function openResourcePreview(resourceId) {
           </div>
         </div>
         <iframe class="pdf-preview-iframe" src="${previewBlobUrl}#toolbar=1" title="${escapeHtml(res.title)}" style="flex: 1; width: 100%; height: calc(100% - 42px); border: none; background: #ffffff;"></iframe>
+      </div>
+    `;
+  } else if (ext === 'docx' || ext === 'doc' || (res.mimeType && res.mimeType.includes('word')) || (res.typeGroup === 'doc' && data && !data.startsWith('data:text') && (!res.fileName || !res.fileName.endsWith('.note')))) {
+    // Rich Office Word Document
+    DOM.resourcePreviewBody.innerHTML = `
+      <div class="gdrive-doc-reader">
+        <div class="gdrive-doc-sheet" style="text-align: center; max-width: 620px; margin: 2rem auto; padding: 2.5rem 2rem;">
+          <div style="font-size: 3.8rem; margin-bottom: 1rem;">📝</div>
+          <h1 style="border-bottom: none; margin-bottom: 0.5rem; word-break: break-word;">${escapeHtml(res.title)}</h1>
+          <div class="gdrive-doc-sheet-meta" style="justify-content: center; margin-bottom: 1.5rem; flex-wrap: wrap;">
+            <span>📎 ${escapeHtml(res.fileName || 'document.docx')}</span>
+            <span>• ${res.sizeFormatted || formatFileSize(res.size)}</span>
+            <span>• ${(res.extension || 'DOC').toUpperCase()}</span>
+          </div>
+          ${res.description ? `<p style="color: var(--text-muted); background: rgba(0,0,0,0.06); padding: 1.25rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: left; line-height: 1.6;">${escapeHtml(res.description)}</p>` : ''}
+          <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;">
+            <button type="button" class="btn-primary" style="padding: 10px 24px; font-size: 0.95rem; font-weight: 600;" onclick="openResourceDirectly('${res.id}')">
+              <span>🚀</span> Open / Launch Document
+            </button>
+            <button type="button" class="btn-secondary" style="padding: 10px 20px; font-size: 0.95rem;" onclick="downloadResource('${res.id}')">
+              <span>⬇️</span> Download File
+            </button>
+          </div>
+        </div>
       </div>
     `;
   } else if (res.typeGroup === 'doc' || ext === 'txt' || ext === 'md' || ext === 'note') {
@@ -4394,7 +4570,15 @@ function onRemoteDataReceived(remote, source) {
       } else {
         // Merge remote with local so locally uploaded files are never lost
         const remoteIds = new Set(validRemote.map(r => r.id));
-        const merged = [...validRemote];
+        const localMap = new Map(STATE.resources.map(lr => [lr.id, lr]));
+        const merged = validRemote.map(remoteR => {
+          const localR = localMap.get(remoteR.id);
+          if (localR) {
+            if (!remoteR.dataUrl && localR.dataUrl) remoteR.dataUrl = localR.dataUrl;
+            if (!remoteR.thumbnail && localR.thumbnail) remoteR.thumbnail = localR.thumbnail;
+          }
+          return remoteR;
+        });
         STATE.resources.forEach(localR => {
           if (!deletedIds.has(localR.id) && !remoteIds.has(localR.id)) {
             merged.push(localR);
