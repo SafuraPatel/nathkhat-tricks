@@ -1733,6 +1733,10 @@ const IdbResourceStore = {
         entries.forEach(entry => {
           if (entry && entry.id && entry.data) {
             memoryFileCache.set(entry.id, entry.data);
+            const res = (STATE.resources || []).find(r => r.id === entry.id);
+            if (res && !res.dataUrl) {
+              res.dataUrl = entry.data;
+            }
           }
         });
       }
@@ -2622,7 +2626,7 @@ async function saveResourceForm(e) {
         STATE.resources[idx].extension = ext;
         STATE.resources[idx].typeGroup = group;
         if (thumb) STATE.resources[idx].thumbnail = thumb;
-        STATE.resources[idx].dataUrl = file.size <= 2 * 1024 * 1024 ? fileDataUrl : '';
+        STATE.resources[idx].dataUrl = fileDataUrl;
       }
 
       saveResources();
@@ -2669,7 +2673,7 @@ async function saveResourceForm(e) {
     unit,
     description: desc,
     thumbnail: thumb,
-    dataUrl: file.size <= 2 * 1024 * 1024 ? fileDataUrl : '',
+    dataUrl: fileDataUrl,
     createdAt: Date.now(),
     updatedAt: Date.now()
   };
@@ -2725,7 +2729,7 @@ async function handleBatchResourceFiles(fileList) {
       unit: '',
       description: '',
       thumbnail: thumb,
-      dataUrl: file.size <= 2 * 1024 * 1024 ? fileDataUrl : '',
+      dataUrl: fileDataUrl,
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
@@ -3208,99 +3212,25 @@ async function seedDefaultFilesIntoIdb() {
 }
 
 /* ==========================================================================
-   Direct Document Opener & Google Drive File Previewer
+   Document Viewer Engine (Opens On Screen Without Downloading)
    ========================================================================== */
 
 /**
- * Directly opens an authentic uploaded document without any modal interruption.
- * - PDFs, images, text, and URLs open in a clean dedicated browser tab with native controls.
- * - Documents (Word/Excel/PowerPoint/Zip) trigger direct native opening/download with real data.
+ * Opens any document directly on screen in the viewer without downloading.
  */
 async function openResourceDirectly(resourceId) {
-  const res = STATE.resources.find(r => r.id === resourceId);
-  if (!res) return;
-
-  // 1. External Web Link -> Open immediately in new tab
-  if (res.linkUrl) {
-    window.open(res.linkUrl, '_blank', 'noopener,noreferrer');
-    return;
-  }
-
-  const ext = (res.extension || (res.fileName && res.fileName.includes('.') ? res.fileName.split('.').pop() : '')).toLowerCase();
-  const cleanBaseName = (res.title || res.fileName || 'document').replace(/[^a-zA-Z0-9_\-\. ]/g, '_').trim();
-  let fileName = res.fileName || cleanBaseName;
-
-  // 2. Fetch the authentic data from all tiers
-  let data = memoryFileCache.get(resourceId) || res.dataUrl || res.fileData;
-  if (!data) {
-    try { data = sessionStorage.getItem('nk_file_' + resourceId); } catch (e) {}
-  }
-  if (!data) {
-    try { data = localStorage.getItem('nk_file_' + resourceId); } catch (e) {}
-  }
-  if (!data) {
-    data = await IdbResourceStore.getFile(resourceId);
-  }
-  if (!data && res.thumbnail && typeof res.thumbnail === 'string' && res.thumbnail.startsWith('data:')) {
-    data = res.thumbnail;
-  }
-
-  // 3. NathKhat-created Study Note without attached binary file
-  if (!data && res.typeGroup === 'doc' && res.description && (!res.fileName || res.fileName.endsWith('.note'))) {
-    openResourcePreview(resourceId);
-    return;
-  }
-
-  // 4. If we have authentic base64 file data
-  if (data && typeof data === 'string' && data.startsWith('data:')) {
-    try {
-      const blob = dataUrlToBlob(data);
-      const blobUrl = URL.createObjectURL(blob);
-
-      // A) Viewable in browser tab: PDF, Image, Web/Text/SVG
-      const isBrowserViewable = 
-        res.typeGroup === 'pdf' || 
-        ext === 'pdf' || 
-        res.typeGroup === 'image' || 
-        ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'bmp', 'ico'].includes(ext) ||
-        ext === 'txt' || 
-        ext === 'html' || 
-        ext === 'md';
-
-      if (isBrowserViewable) {
-        const opened = window.open(blobUrl, '_blank');
-        if (!opened || opened.closed || typeof opened.closed === 'undefined') {
-          // Fallback if popup blocker intercepted
-          const a = document.createElement('a');
-          a.href = blobUrl;
-          a.target = '_blank';
-          a.rel = 'noopener noreferrer';
-          document.body.appendChild(a);
-          a.click();
-          setTimeout(() => {
-            try { a.remove(); } catch (err) {}
-          }, 1000);
-        }
-        return;
-      }
-
-      // B) Native Office / Desktop Apps: Word (.docx, .doc), Excel (.xlsx, .csv), PPT (.pptx), Zip, etc.
-      // Launch/download directly with authentic binary bytes so Word/Excel opens it cleanly without interruption
-      downloadBlob(blob, fileName);
-      showToast(`Opening "${fileName}"...`, 'info');
-      return;
-    } catch (err) {
-      console.warn('Error opening blobUrl directly, falling back to download:', err);
-    }
-  }
-
-  // 5. Fallback if data was not in storage (e.g. seed data or synced placeholder)
-  downloadResource(resourceId);
+  openResourcePreview(resourceId);
 }
 
 async function openResourcePreview(resourceId) {
   const res = STATE.resources.find(r => r.id === resourceId);
   if (!res) return;
+
+  // External Web Links open in new tab
+  if (res.linkUrl) {
+    window.open(res.linkUrl, '_blank', 'noopener,noreferrer');
+    return;
+  }
 
   STATE.activePreviewResourceId = resourceId;
 
@@ -3324,30 +3254,44 @@ async function openResourcePreview(resourceId) {
   if (DOM.previewNextBtn) DOM.previewNextBtn.style.display = currentFiltered.length > 1 ? 'flex' : 'none';
 
   if (!DOM.resourcePreviewBody) return;
-  DOM.resourcePreviewBody.innerHTML = '<div style="padding: 3rem; color: var(--text-dim); text-align: center;"><div class="loading-spinner" style="margin: 0 auto 1rem; width: 36px; height: 36px; border: 3px solid rgba(99,102,241,0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>Loading preview...</div>';
+  DOM.resourcePreviewBody.innerHTML = '<div style="padding: 3rem; color: var(--text-dim); text-align: center;"><div class="loading-spinner" style="margin: 0 auto 1rem; width: 36px; height: 36px; border: 3px solid rgba(99,102,241,0.2); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite;"></div>Loading document...</div>';
 
-  let data = await IdbResourceStore.getFile(resourceId);
-  if (!data && (res.thumbnail || res.dataUrl)) {
-    data = res.thumbnail || res.dataUrl;
+  if (DOM.resourcePreviewModal) {
+    DOM.resourcePreviewModal.classList.add('open');
+    pushModalHistory('resourcePreviewModal');
   }
 
+  // Retrieve authentic uploaded data without any synthesis or dummy modification
+  let data = memoryFileCache.get(resourceId) || res.dataUrl || res.fileData;
+  if (!data) {
+    try { data = sessionStorage.getItem('nk_file_' + resourceId); } catch (e) {}
+  }
+  if (!data) {
+    try { data = localStorage.getItem('nk_file_' + resourceId); } catch (e) {}
+  }
+  if (!data) {
+    data = await IdbResourceStore.getFile(resourceId);
+  }
+  if (!data && res.thumbnail && typeof res.thumbnail === 'string' && res.thumbnail.startsWith('data:')) {
+    data = res.thumbnail;
+  }
+
+  if (data) {
+    memoryFileCache.set(resourceId, data);
+    res.dataUrl = data;
+  }
+
+  const ext = (res.extension || (res.fileName && res.fileName.includes('.') ? res.fileName.split('.').pop() : '')).toLowerCase();
   let previewBlobUrl = '';
-  const ext = (res.extension || '').toLowerCase();
 
   if (data && typeof data === 'string' && data.startsWith('data:')) {
-    const blob = dataUrlToBlob(data);
-    previewBlobUrl = URL.createObjectURL(blob);
-  } else if (res.typeGroup === 'pdf' || ext === 'pdf') {
-    const blob = generateValidPdfBlob(res.title, res.description || 'Study notes & revision guide.', res);
-    previewBlobUrl = URL.createObjectURL(blob);
-    // Never overwrite authentic IndexedDB files with dummy placeholder PDFs
-  } else if (res.typeGroup === 'image' || ext === 'svg') {
-    const svgXml = (data && data.includes('<svg')) ? data.replace(/^data:image\/svg\+xml;utf8,/, '') : (res.thumbnail && res.thumbnail.includes('<svg') ? res.thumbnail.replace(/^data:image\/svg\+xml;utf8,/, '') : `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" width="100%" height="100%"><rect width="600" height="400" fill="#0f172a"/><text x="300" y="180" fill="#f8fafc" font-size="20" font-weight="bold" font-family="sans-serif" text-anchor="middle">${escapeHtml(res.title)}</text><text x="300" y="220" fill="#94a3b8" font-size="14" font-family="sans-serif" text-anchor="middle">NathKhat Study Diagram</text></svg>`);
-    const blob = new Blob([svgXml], { type: 'image/svg+xml;charset=utf-8' });
-    previewBlobUrl = URL.createObjectURL(blob);
+    try {
+      const blob = dataUrlToBlob(data);
+      previewBlobUrl = URL.createObjectURL(blob);
+    } catch (e) {}
   }
 
-  // Action: Open in dedicated browser tab without downloading
+  // Action: Open in dedicated browser tab (explicit user choice)
   if (DOM.previewOpenNewTabBtn) {
     DOM.previewOpenNewTabBtn.onclick = () => {
       if (previewBlobUrl) {
@@ -3355,71 +3299,116 @@ async function openResourcePreview(resourceId) {
       } else if (res.linkUrl) {
         window.open(res.linkUrl, '_blank');
       } else {
-        downloadResource(resourceId);
+        showToast('Document is open on screen.', 'info');
       }
     };
   }
 
-  // Action: Download
+  // Action: Download (explicit user choice only)
   if (DOM.previewDownloadBtn) {
     DOM.previewDownloadBtn.onclick = () => downloadResource(resourceId);
   }
 
-  // Render Full In-App Preview by Type
-  if (res.typeGroup === 'image') {
+  // 1. PDF Documents: Render authentic uploaded PDF directly inside iframe on screen
+  if (res.typeGroup === 'pdf' || ext === 'pdf') {
+    if (previewBlobUrl) {
+      DOM.resourcePreviewBody.innerHTML = `
+        <div style="width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden;">
+          <div class="pdf-preview-toolbar">
+            <span class="pdf-title-label" style="color: var(--text-dim); display: flex; align-items: center; gap: 6px;">
+              <span>📄</span> ${escapeHtml(res.fileName || res.title)}
+            </span>
+            <div class="pdf-preview-actions">
+              <button type="button" class="btn-secondary" style="padding: 4px 12px; font-size: 0.8rem;" onclick="window.open('${previewBlobUrl}', '_blank')">↗️ Open in Tab</button>
+              <button type="button" class="btn-primary" style="padding: 4px 12px; font-size: 0.8rem;" onclick="downloadResource('${res.id}')">⬇️ Download PDF</button>
+            </div>
+          </div>
+          <iframe class="pdf-preview-iframe" src="${previewBlobUrl}#toolbar=1" title="${escapeHtml(res.title)}" style="flex: 1; width: 100%; height: calc(100% - 42px); border: none; background: #ffffff;"></iframe>
+        </div>
+      `;
+    } else {
+      DOM.resourcePreviewBody.innerHTML = `
+        <div style="padding: 3rem 1.5rem; text-align: center; color: var(--text-muted); max-width: 520px; margin: 0 auto;">
+          <span style="font-size: 3.5rem; display: block; margin-bottom: 1rem;">📄</span>
+          <h3 style="color: var(--text-main); margin-bottom: 0.5rem;">${escapeHtml(res.title)}</h3>
+          <p style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1.5rem;">${escapeHtml(res.fileName || 'document.pdf')} • ${res.sizeFormatted || formatFileSize(res.size)}</p>
+          ${res.description ? `<p style="background: rgba(0,0,0,0.06); padding: 1.25rem; border-radius: 8px; text-align: left; line-height: 1.6; margin-bottom: 1.5rem;">${escapeHtml(res.description)}</p>` : ''}
+          <button type="button" class="btn-primary" onclick="downloadResource('${res.id}')">⬇️ Download PDF</button>
+        </div>
+      `;
+    }
+    return;
+  }
+
+  // 2. Word Documents (.docx): Render authentic Word document on screen via Mammoth.js
+  if ((ext === 'docx' || (res.mimeType && res.mimeType.includes('wordprocessingml'))) && typeof mammoth !== 'undefined' && data && typeof data === 'string' && data.startsWith('data:')) {
+    try {
+      const blob = dataUrlToBlob(data);
+      const arrayBuffer = await blob.arrayBuffer();
+      const result = await mammoth.convertToHtml({ arrayBuffer });
+      const docHtml = (result && result.value) ? result.value : '<p><em>Empty document.</em></p>';
+
+      DOM.resourcePreviewBody.innerHTML = `
+        <div class="gdrive-doc-reader">
+          <div class="gdrive-doc-sheet">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.25rem; gap: 0.5rem; flex-wrap: wrap; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+              <h1 style="min-width: 0; flex: 1; margin: 0; word-break: break-word;">${escapeHtml(res.title)}</h1>
+              <div style="display: flex; gap: 0.5rem;">
+                <button type="button" class="btn-secondary" style="padding: 4px 12px; font-size: 0.8rem;" id="previewCopyDocBtn">📋 Copy</button>
+                <button type="button" class="btn-secondary" style="padding: 4px 12px; font-size: 0.8rem;" onclick="downloadResource('${res.id}')">⬇️ Download</button>
+              </div>
+            </div>
+            <div class="gdrive-doc-sheet-meta" style="margin-bottom: 1.5rem;">
+              <span>📎 ${escapeHtml(res.fileName || 'document.docx')}</span>
+              <span>• ${res.sizeFormatted || formatFileSize(res.size)}</span>
+              ${res.unit ? `<span>• 🏷️ ${escapeHtml(res.unit)}</span>` : ''}
+            </div>
+            <div class="gdrive-doc-sheet-body" style="line-height: 1.8; font-size: 0.95rem; color: var(--text-main);">
+              ${docHtml}
+            </div>
+          </div>
+        </div>
+      `;
+      const copyBtn = DOM.resourcePreviewBody.querySelector('#previewCopyDocBtn');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', () => {
+          const bodyEl = DOM.resourcePreviewBody.querySelector('.gdrive-doc-sheet-body');
+          if (bodyEl) {
+            navigator.clipboard.writeText(bodyEl.innerText);
+            showToast('Document text copied to clipboard!', 'success');
+          }
+        });
+      }
+      return;
+    } catch (err) {
+      console.warn('Could not parse docx via Mammoth:', err);
+    }
+  }
+
+  // 3. Images: Render authentic uploaded image directly on screen
+  if (res.typeGroup === 'image' || ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'bmp', 'ico'].includes(ext)) {
     const imgSrc = previewBlobUrl || data || res.thumbnail || '';
     DOM.resourcePreviewBody.innerHTML = `
       <div style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: auto; padding: 1.5rem;">
         <img class="image-preview-full" src="${imgSrc}" alt="${escapeHtml(res.title)}" style="max-width: 95%; max-height: 82vh; object-fit: contain; border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.35);" />
       </div>
     `;
-  } else if (res.typeGroup === 'pdf' || ext === 'pdf') {
-    DOM.resourcePreviewBody.innerHTML = `
-      <div style="width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden;">
-        <div class="pdf-preview-toolbar">
-          <span class="pdf-title-label" style="color: var(--text-dim); display: flex; align-items: center; gap: 6px;">
-            <span>📄</span> In-App PDF Document Viewer
-          </span>
-          <div class="pdf-preview-actions">
-            <button type="button" class="btn-secondary" style="padding: 4px 12px; font-size: 0.8rem;" onclick="window.open('${previewBlobUrl}', '_blank')">↗️ Fullscreen View</button>
-            <button type="button" class="btn-primary" style="padding: 4px 12px; font-size: 0.8rem;" onclick="downloadResource('${res.id}')">⬇️ Download PDF</button>
-          </div>
-        </div>
-        <iframe class="pdf-preview-iframe" src="${previewBlobUrl}#toolbar=1" title="${escapeHtml(res.title)}" style="flex: 1; width: 100%; height: calc(100% - 42px); border: none; background: #ffffff;"></iframe>
-      </div>
-    `;
-  } else if (ext === 'docx' || ext === 'doc' || (res.mimeType && res.mimeType.includes('word')) || (res.typeGroup === 'doc' && data && !data.startsWith('data:text') && (!res.fileName || !res.fileName.endsWith('.note')))) {
-    // Rich Office Word Document
-    DOM.resourcePreviewBody.innerHTML = `
-      <div class="gdrive-doc-reader">
-        <div class="gdrive-doc-sheet" style="text-align: center; max-width: 620px; margin: 2rem auto; padding: 2.5rem 2rem;">
-          <div style="font-size: 3.8rem; margin-bottom: 1rem;">📝</div>
-          <h1 style="border-bottom: none; margin-bottom: 0.5rem; word-break: break-word;">${escapeHtml(res.title)}</h1>
-          <div class="gdrive-doc-sheet-meta" style="justify-content: center; margin-bottom: 1.5rem; flex-wrap: wrap;">
-            <span>📎 ${escapeHtml(res.fileName || 'document.docx')}</span>
-            <span>• ${res.sizeFormatted || formatFileSize(res.size)}</span>
-            <span>• ${(res.extension || 'DOC').toUpperCase()}</span>
-          </div>
-          ${res.description ? `<p style="color: var(--text-muted); background: rgba(0,0,0,0.06); padding: 1.25rem; border-radius: 8px; margin-bottom: 1.5rem; text-align: left; line-height: 1.6;">${escapeHtml(res.description)}</p>` : ''}
-          <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;">
-            <button type="button" class="btn-primary" style="padding: 10px 24px; font-size: 0.95rem; font-weight: 600;" onclick="openResourceDirectly('${res.id}')">
-              <span>🚀</span> Open / Launch Document
-            </button>
-            <button type="button" class="btn-secondary" style="padding: 10px 20px; font-size: 0.95rem;" onclick="downloadResource('${res.id}')">
-              <span>⬇️</span> Download File
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-  } else if (res.typeGroup === 'doc' || ext === 'txt' || ext === 'md' || ext === 'note') {
+    return;
+  }
+
+  // 4. Text / Notes / Markdown: Render full text on screen
+  if (res.typeGroup === 'doc' || ext === 'txt' || ext === 'md' || ext === 'note' || ext === 'html' || ext === 'json' || ext === 'js' || ext === 'py') {
     let textContent = res.description || '';
-    if (data && typeof data === 'string' && data.startsWith('data:text')) {
+    if (data && typeof data === 'string' && (data.startsWith('data:text') || data.startsWith('data:application/json') || data.startsWith('data:application/javascript'))) {
       try {
         const base64Part = data.split(',')[1];
         textContent = decodeURIComponent(escape(atob(base64Part)));
       } catch (e) {
-        textContent = res.description || '';
+        try {
+          textContent = atob(data.split(',')[1]);
+        } catch (e2) {
+          textContent = res.description || '';
+        }
       }
     }
     const wordsCount = textContent ? textContent.trim().split(/\s+/).length : 0;
@@ -3434,7 +3423,7 @@ async function openResourcePreview(resourceId) {
             <span>📊 ${wordsCount} words</span>
             ${res.unit ? `<span>• 🏷️ ${escapeHtml(res.unit)}</span>` : ''}
           </div>
-          <div class="gdrive-doc-sheet-body">${escapeHtml(textContent || 'No text content available.')}</div>
+          <div class="gdrive-doc-sheet-body" style="white-space: pre-wrap; font-family: var(--font-mono, monospace); line-height: 1.6;">${escapeHtml(textContent || 'No text content available.')}</div>
         </div>
       </div>
     `;
@@ -3445,46 +3434,57 @@ async function openResourcePreview(resourceId) {
         showToast('Document text copied to clipboard!', 'success');
       });
     }
-  } else if (res.typeGroup === 'audio') {
+    return;
+  }
+
+  // 5. Audio Files
+  if (res.typeGroup === 'audio' || ['mp3', 'wav', 'ogg', 'm4a'].includes(ext)) {
     DOM.resourcePreviewBody.innerHTML = `
       <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; gap: 1.5rem; padding: 2rem;">
         <span style="font-size: 4rem;">🎵</span>
         <h3 style="font-size: 1.25rem; font-weight: 700; color: var(--text-main); text-align: center; word-break: break-word;">${escapeHtml(res.title)}</h3>
-        <audio controls src="${data || ''}" style="width: 100%; max-width: 500px;"></audio>
+        <audio controls src="${previewBlobUrl || data || ''}" style="width: 100%; max-width: 500px;"></audio>
       </div>
     `;
-  } else {
-    // Links / Spreadsheets / Other files
-    let fileIcon = '📁';
-    if (res.typeGroup === 'sheet') fileIcon = '📊';
-    else if (res.typeGroup === 'archive') fileIcon = '📦';
-    else if (res.linkUrl) fileIcon = '🔗';
+    return;
+  }
 
+  // 6. Video Files
+  if (res.typeGroup === 'video' || ['mp4', 'webm'].includes(ext)) {
     DOM.resourcePreviewBody.innerHTML = `
-      <div class="gdrive-doc-reader">
-        <div class="gdrive-doc-sheet" style="text-align: center; max-width: 620px;">
-          <div style="font-size: 3.5rem; margin-bottom: 1rem;">${fileIcon}</div>
-          <h1 style="border-bottom: none; margin-bottom: 0.5rem; word-break: break-word; overflow-wrap: anywhere;">${escapeHtml(res.title)}</h1>
-          <div class="gdrive-doc-sheet-meta" style="justify-content: center; flex-wrap: wrap;">
-            <span style="word-break: break-all;">${escapeHtml(res.fileName || 'file')}</span>
-            <span>• ${res.sizeFormatted || formatFileSize(res.size)}</span>
-          </div>
-          ${res.description ? `<p style="color: var(--text-muted); line-height: 1.6; text-align: left; background: rgba(0,0,0,0.06); padding: 1.25rem; border-radius: 8px; margin: 1.25rem 0; word-break: break-word; overflow-wrap: anywhere;">${escapeHtml(res.description)}</p>` : ''}
-          ${res.linkUrl ? `<div style="margin: 1.5rem 0;"><a href="${res.linkUrl}" target="_blank" rel="noopener" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px; padding: 0.75rem 1.5rem; text-decoration: none; word-break: break-all; max-width: 100%;"><span>🔗</span> Open Link in New Tab</a></div>` : ''}
-          <div style="display: flex; justify-content: center; gap: 0.75rem; margin-top: 1.5rem; flex-wrap: wrap;">
-            <button type="button" class="btn-primary" onclick="downloadResource('${res.id}')">
-              <span>⬇️</span> Download File
-            </button>
-          </div>
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; gap: 1rem; padding: 1.5rem;">
+        <video controls src="${previewBlobUrl || data || ''}" style="max-width: 95%; max-height: 80vh; border-radius: 8px;"></video>
+      </div>
+    `;
+    return;
+  }
+
+  // 7. Other Files (.doc, .xlsx, .pptx, .zip) -> Clean viewer card (NO automatic download!)
+  let fileIcon = '📁';
+  if (res.typeGroup === 'sheet' || ['xls', 'xlsx', 'csv'].includes(ext)) fileIcon = '📊';
+  else if (res.typeGroup === 'archive' || ['zip', 'rar', '7z'].includes(ext)) fileIcon = '📦';
+  else if (['ppt', 'pptx'].includes(ext)) fileIcon = '📽️';
+  else if (['doc', 'docx'].includes(ext)) fileIcon = '📝';
+
+  DOM.resourcePreviewBody.innerHTML = `
+    <div class="gdrive-doc-reader">
+      <div class="gdrive-doc-sheet" style="text-align: center; max-width: 600px; margin: 2rem auto; padding: 2.5rem 2rem;">
+        <div style="font-size: 3.5rem; margin-bottom: 1rem;">${fileIcon}</div>
+        <h1 style="border-bottom: none; margin-bottom: 0.5rem; word-break: break-word;">${escapeHtml(res.title)}</h1>
+        <div class="gdrive-doc-sheet-meta" style="justify-content: center; margin-bottom: 1.5rem; flex-wrap: wrap;">
+          <span style="word-break: break-all;">${escapeHtml(res.fileName || 'file')}</span>
+          <span>• ${res.sizeFormatted || formatFileSize(res.size)}</span>
+          <span>• ${(res.extension || res.typeGroup || 'FILE').toUpperCase()}</span>
+        </div>
+        ${res.description ? `<p style="color: var(--text-muted); line-height: 1.6; text-align: left; background: rgba(0,0,0,0.06); padding: 1.25rem; border-radius: 8px; margin: 1.25rem 0;">${escapeHtml(res.description)}</p>` : ''}
+        <div style="display: flex; justify-content: center; gap: 0.75rem; margin-top: 1.5rem; flex-wrap: wrap;">
+          <button type="button" class="btn-primary" onclick="downloadResource('${res.id}')">
+            <span>⬇️</span> Download File (${res.sizeFormatted || formatFileSize(res.size)})
+          </button>
         </div>
       </div>
-    `;
-  }
-
-  if (DOM.resourcePreviewModal) {
-    DOM.resourcePreviewModal.classList.add('open');
-    pushModalHistory('resourcePreviewModal');
-  }
+    </div>
+  `;
 }
 
 function closeResourcePreview(triggerHistoryBack = false) {
