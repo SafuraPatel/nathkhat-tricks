@@ -54,6 +54,7 @@ exports.handler = async (event, context) => {
           topics: null,
           notes: null,
           bin: null,
+          resources: null,
           updatedAt: 0
         })
       };
@@ -66,6 +67,7 @@ exports.handler = async (event, context) => {
         topics: Array.isArray(payload.topics) ? payload.topics : [],
         notes: Array.isArray(payload.notes) ? payload.notes : [],
         bin: Array.isArray(payload.bin) ? payload.bin : [],
+        resources: Array.isArray(payload.resources) ? payload.resources : [],
         updatedAt: payload.updatedAt || Date.now()
       };
 
@@ -80,7 +82,8 @@ exports.handler = async (event, context) => {
           counts: {
             topics: record.topics.length,
             notes: record.notes.length,
-            bin: record.bin.length
+            bin: record.bin.length,
+            resources: record.resources.length
           }
         })
       };

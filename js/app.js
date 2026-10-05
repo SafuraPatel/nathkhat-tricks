@@ -9,11 +9,18 @@ const STATE = {
   topics: [],
   bin: [],
   notes: [],
+  resources: [],
+  activeResourceTypeFilter: 'all', // 'all' | 'pdf' | 'image' | 'doc' | 'other'
+  resourceSearchQuery: '',
+  resourceSortBy: 'newest', // 'newest' | 'oldest' | 'name' | 'size-desc' | 'size-asc'
+  editingResourceId: null,
+  activePreviewResourceId: null,
+  currentSelectedUploadFile: null,
   editingNoteId: null,
   notepad: '',
   theme: 'dark',
   activePaper: 'ALL', // 'ALL' | 'P1' | 'P2'
-  activeView: 'topicsView', // 'topicsView' | 'notepadView' | 'binView'
+  activeView: 'topicsView', // 'topicsView' | 'notepadView' | 'resourcesView' | 'binView'
   searchQuery: '',
   indexFilter: '',
   sortBy: 'newest', // 'newest' | 'alphabetical' | 'paper'
@@ -25,6 +32,7 @@ const STORAGE_KEYS = {
   TOPICS: 'nathkhat_topics_v1',
   BIN: 'nathkhat_bin_v1',
   NOTES: 'nathkhat_notes_v1',
+  RESOURCES: 'nathkhat_resources_v1',
   NOTEPAD: 'nathkhat_notepad_v1',
   THEME: 'nathkhat_theme_v1',
   ACTIVE_VIEW: 'nathkhat_active_view_v1',
@@ -54,15 +62,18 @@ const DOM = {
   // Navigation Tabs
   tabTopicsView: document.getElementById('tabTopicsView'),
   tabNotepadView: document.getElementById('tabNotepadView'),
+  tabResourcesView: document.getElementById('tabResourcesView'),
   tabBinView: document.getElementById('tabBinView'),
   activeTopicsBadge: document.getElementById('activeTopicsBadge'),
   notesCountBadge: document.getElementById('notesCountBadge'),
+  resourcesCountBadge: document.getElementById('resourcesCountBadge'),
   binCountBadge: document.getElementById('binCountBadge'),
   quickStatsText: document.getElementById('quickStatsText'),
 
   // Views
   topicsView: document.getElementById('topicsView'),
   notepadView: document.getElementById('notepadView'),
+  resourcesView: document.getElementById('resourcesView'),
   binView: document.getElementById('binView'),
 
   // Index (Section 1)
@@ -86,6 +97,62 @@ const DOM = {
   notesEmptyState: document.getElementById('notesEmptyState'),
   emptyStateAddNoteBtn: document.getElementById('emptyStateAddNoteBtn'),
   openAddNoteBtn: document.getElementById('openAddNoteBtn'),
+
+  // Resources Section
+  resourcesContainer: document.getElementById('resourcesContainer'),
+  resourcesEmptyState: document.getElementById('resourcesEmptyState'),
+  openUploadResourceBtn: document.getElementById('openUploadResourceBtn'),
+  emptyStateUploadBtn: document.getElementById('emptyStateUploadBtn'),
+  resourcesDropzone: document.getElementById('resourcesDropzone'),
+  resourceDropInput: document.getElementById('resourceDropInput'),
+  dropzoneBrowseBtn: document.getElementById('dropzoneBrowseBtn'),
+  batchResourceFileInput: document.getElementById('batchResourceFileInput'),
+  resourceSearchInput: document.getElementById('resourceSearchInput'),
+  clearResourceSearchBtn: document.getElementById('clearResourceSearchBtn'),
+  resourceSortSelect: document.getElementById('resourceSortSelect'),
+  resourcesStatsOverview: document.getElementById('resourcesStatsOverview'),
+  pillTypeAll: document.getElementById('pillTypeAll'),
+  pillTypePdf: document.getElementById('pillTypePdf'),
+  pillTypeImage: document.getElementById('pillTypeImage'),
+  pillTypeDoc: document.getElementById('pillTypeDoc'),
+  pillTypeOther: document.getElementById('pillTypeOther'),
+  typeCountAll: document.getElementById('typeCountAll'),
+  typeCountPdf: document.getElementById('typeCountPdf'),
+  typeCountImage: document.getElementById('typeCountImage'),
+  typeCountDoc: document.getElementById('typeCountDoc'),
+  typeCountOther: document.getElementById('typeCountOther'),
+
+  // Resource Modal
+  resourceModal: document.getElementById('resourceModal'),
+  resourceModalTitle: document.getElementById('resourceModalTitle'),
+  closeResourceModalBtn: document.getElementById('closeResourceModalBtn'),
+  cancelResourceModalBtn: document.getElementById('cancelResourceModalBtn'),
+  saveResourceBtn: document.getElementById('saveResourceBtn'),
+  resourceForm: document.getElementById('resourceForm'),
+  resourceIdInput: document.getElementById('resourceIdInput'),
+  resourceTitleInput: document.getElementById('resourceTitleInput'),
+  resourcePaperInput: document.getElementById('resourcePaperInput'),
+  resourceCategoryInput: document.getElementById('resourceCategoryInput'),
+  resourceUnitInput: document.getElementById('resourceUnitInput'),
+  resourceDescInput: document.getElementById('resourceDescInput'),
+  modalFileDropzone: document.getElementById('modalFileDropzone'),
+  modalFileInput: document.getElementById('modalFileInput'),
+  modalFilePrompt: document.getElementById('modalFilePrompt'),
+  modalFileSelected: document.getElementById('modalFileSelected'),
+  modalSelectedBadge: document.getElementById('modalSelectedBadge'),
+  modalSelectedFileName: document.getElementById('modalSelectedFileName'),
+  modalSelectedFileMeta: document.getElementById('modalSelectedFileMeta'),
+  modalChangeFileBtn: document.getElementById('modalChangeFileBtn'),
+
+  // Resource Preview Modal
+  resourcePreviewModal: document.getElementById('resourcePreviewModal'),
+  previewModalTitle: document.getElementById('previewModalTitle'),
+  previewTypeBadge: document.getElementById('previewTypeBadge'),
+  previewMetaSub: document.getElementById('previewMetaSub'),
+  previewOpenNewTabBtn: document.getElementById('previewOpenNewTabBtn'),
+  previewDownloadBtn: document.getElementById('previewDownloadBtn'),
+  closeResourcePreviewBtn: document.getElementById('closeResourcePreviewBtn'),
+  resourcePreviewBody: document.getElementById('resourcePreviewBody'),
 
   // Note Modal (Word-like Rich Text)
   noteModal: document.getElementById('noteModal'),
@@ -178,6 +245,7 @@ function initApp() {
     renderIndex();
     renderTopics();
     renderNotepad();
+    renderResources();
     renderBin();
 
     // Restore exact active section after refresh!
@@ -205,7 +273,7 @@ function loadStoredData() {
   // Load Active View & Filter across refreshes
   const hash = window.location.hash ? window.location.hash.replace('#', '') : '';
   const savedView = localStorage.getItem(STORAGE_KEYS.ACTIVE_VIEW);
-  const validViews = ['topicsView', 'notepadView', 'binView'];
+  const validViews = ['topicsView', 'notepadView', 'resourcesView', 'binView'];
 
   if (validViews.includes(hash)) {
     STATE.activeView = hash;
@@ -286,6 +354,29 @@ function loadStoredData() {
     }
     saveNotes();
   }
+
+  // Load Resources (PDFs, Images, Documents, Any Files)
+  const savedResources = localStorage.getItem(STORAGE_KEYS.RESOURCES);
+  if (savedResources) {
+    try {
+      STATE.resources = JSON.parse(savedResources);
+      if (!Array.isArray(STATE.resources) || STATE.resources.length === 0) {
+        if (typeof SEED_RESOURCES !== 'undefined' && SEED_RESOURCES.length > 0) {
+          STATE.resources = [...SEED_RESOURCES];
+          saveResources();
+        }
+      }
+    } catch (e) {
+      STATE.resources = typeof SEED_RESOURCES !== 'undefined' ? [...SEED_RESOURCES] : [];
+      saveResources();
+    }
+  } else if (typeof SEED_RESOURCES !== 'undefined') {
+    STATE.resources = [...SEED_RESOURCES];
+    saveResources();
+  } else {
+    STATE.resources = [];
+    saveResources();
+  }
 }
 
 function saveTopics() {
@@ -299,6 +390,11 @@ function saveBin() {
 function saveNotes() {
   localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(STATE.notes));
   if (DOM.notesCountBadge) DOM.notesCountBadge.textContent = STATE.notes.length;
+}
+
+function saveResources() {
+  localStorage.setItem(STORAGE_KEYS.RESOURCES, JSON.stringify(STATE.resources));
+  if (DOM.resourcesCountBadge) DOM.resourcesCountBadge.textContent = STATE.resources.length;
 }
 
 function saveNotepad() {
@@ -358,7 +454,7 @@ function switchView(viewName, updateUrl = true) {
   }
 
   // Update tabs
-  [DOM.tabTopicsView, DOM.tabNotepadView, DOM.tabBinView].forEach(btn => {
+  [DOM.tabTopicsView, DOM.tabNotepadView, DOM.tabResourcesView, DOM.tabBinView].forEach(btn => {
     if (btn && btn.getAttribute('data-view') === viewName) {
       btn.classList.add('active');
     } else if (btn) {
@@ -367,7 +463,7 @@ function switchView(viewName, updateUrl = true) {
   });
 
   // Update Views
-  [DOM.topicsView, DOM.notepadView, DOM.binView].forEach(view => {
+  [DOM.topicsView, DOM.notepadView, DOM.resourcesView, DOM.binView].forEach(view => {
     if (view && view.id === viewName) {
       view.classList.add('active');
     } else if (view) {
@@ -380,6 +476,8 @@ function switchView(viewName, updateUrl = true) {
     renderIndex();
   } else if (viewName === 'notepadView') {
     renderNotepad();
+  } else if (viewName === 'resourcesView') {
+    renderResources();
   } else if (viewName === 'binView') {
     renderBin();
   }
@@ -403,6 +501,7 @@ function setPaperFilter(paper) {
 
   renderIndex();
   renderTopics();
+  if (DOM.resourcesView) renderResources();
 }
 
 function updateBadges() {
@@ -411,6 +510,7 @@ function updateBadges() {
   const p2Count = STATE.topics.filter(t => t.paper === 'P2').length;
   const binCount = STATE.bin.length;
   const notesCount = STATE.notes ? STATE.notes.length : 0;
+  const resourcesCount = STATE.resources ? STATE.resources.length : 0;
 
   DOM.countAllBadge.textContent = total;
   DOM.countP1Badge.textContent = p1Count;
@@ -418,6 +518,7 @@ function updateBadges() {
   DOM.activeTopicsBadge.textContent = total;
   DOM.binCountBadge.textContent = binCount;
   if (DOM.notesCountBadge) DOM.notesCountBadge.textContent = notesCount;
+  if (DOM.resourcesCountBadge) DOM.resourcesCountBadge.textContent = resourcesCount;
   if (DOM.indexCountBadge) DOM.indexCountBadge.textContent = total;
   if (DOM.quickStatsText) {
     DOM.quickStatsText.textContent = `${total} Topics Ready • P1: ${p1Count} | P2: ${p2Count}`;
@@ -1390,6 +1491,1016 @@ function fallbackCopyText(text) {
   showToast('Note content copied!', 'success');
 }
 
+/* ==========================================================================
+   SECTION: Study Resources & Files Engine (PDFs, Images, Documents, Any File)
+   ========================================================================== */
+
+const IdbResourceStore = {
+  dbPromise: null,
+
+  getDB() {
+    if (this.dbPromise) return this.dbPromise;
+    this.dbPromise = new Promise((resolve) => {
+      try {
+        if (!window.indexedDB) {
+          resolve(null);
+          return;
+        }
+        const req = indexedDB.open('NathKhat_Resources_DB', 1);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains('files')) {
+            db.createObjectStore('files', { keyPath: 'id' });
+          }
+        };
+        req.onsuccess = (e) => resolve(e.target.result);
+        req.onerror = () => resolve(null);
+      } catch (err) {
+        resolve(null);
+      }
+    });
+    return this.dbPromise;
+  },
+
+  async saveFile(id, fileData, mimeType, name) {
+    const db = await this.getDB();
+    if (!db) {
+      try { sessionStorage.setItem('nk_file_' + id, fileData); } catch (e) {}
+      return;
+    }
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction('files', 'readwrite');
+        const store = tx.objectStore('files');
+        store.put({ id, data: fileData, mimeType, name, updatedAt: Date.now() });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+      } catch (e) {
+        resolve(false);
+      }
+    });
+  },
+
+  async getFile(id) {
+    const db = await this.getDB();
+    if (!db) {
+      try { return sessionStorage.getItem('nk_file_' + id); } catch (e) { return null; }
+    }
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction('files', 'readonly');
+        const store = tx.objectStore('files');
+        const req = store.get(id);
+        req.onsuccess = () => {
+          if (req.result && req.result.data) {
+            resolve(req.result.data);
+          } else {
+            resolve(null);
+          }
+        };
+        req.onerror = () => resolve(null);
+      } catch (e) {
+        resolve(null);
+      }
+    });
+  },
+
+  async deleteFile(id) {
+    const db = await this.getDB();
+    if (!db) {
+      try { sessionStorage.removeItem('nk_file_' + id); } catch (e) {}
+      return;
+    }
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction('files', 'readwrite');
+        const store = tx.objectStore('files');
+        store.delete(id);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+      } catch (e) {
+        resolve(false);
+      }
+    });
+  }
+};
+
+function getFileTypeGroup(fileName, mimeType) {
+  const ext = (fileName || '').split('.').pop().toLowerCase();
+  const mime = (mimeType || '').toLowerCase();
+
+  if (ext === 'pdf' || mime.includes('pdf')) return 'pdf';
+  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico'].includes(ext) || mime.startsWith('image/')) return 'image';
+  if (['doc', 'docx', 'odt', 'rtf', 'txt', 'md'].includes(ext) || mime.includes('word') || mime.includes('text/plain') || mime.includes('markdown')) return 'doc';
+  if (['xls', 'xlsx', 'csv', 'ods'].includes(ext) || mime.includes('spreadsheet') || mime.includes('excel') || mime.includes('csv')) return 'sheet';
+  if (['ppt', 'pptx', 'odp'].includes(ext) || mime.includes('presentation') || mime.includes('powerpoint')) return 'doc';
+  if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext) || mime.includes('zip') || mime.includes('compressed')) return 'archive';
+  if (['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'].includes(ext) || mime.startsWith('audio/')) return 'audio';
+  return 'other';
+}
+
+function formatFileSize(bytes) {
+  if (!bytes || bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
+}
+
+function generateImageThumbnail(file) {
+  return new Promise((resolve) => {
+    if (!file || !file.type.startsWith('image/')) {
+      resolve('');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxW = 380;
+        const maxH = 220;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxW || h > maxH) {
+          const ratio = Math.min(maxW / w, maxH / h);
+          w = Math.round(w * ratio);
+          h = Math.round(h * ratio);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = () => resolve(e.target.result);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
+}
+
+function readFileAsDataURL(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderResources() {
+  if (!DOM.resourcesContainer) return;
+  DOM.resourcesContainer.innerHTML = '';
+
+  const resources = STATE.resources || [];
+
+  // Update breakdown counts
+  const totalCount = resources.length;
+  const pdfCount = resources.filter(r => r.typeGroup === 'pdf').length;
+  const imgCount = resources.filter(r => r.typeGroup === 'image').length;
+  const docCount = resources.filter(r => r.typeGroup === 'doc' || r.typeGroup === 'sheet').length;
+  const otherCount = resources.filter(r => !['pdf', 'image', 'doc', 'sheet'].includes(r.typeGroup)).length;
+
+  if (DOM.typeCountAll) DOM.typeCountAll.textContent = totalCount;
+  if (DOM.typeCountPdf) DOM.typeCountPdf.textContent = pdfCount;
+  if (DOM.typeCountImage) DOM.typeCountImage.textContent = imgCount;
+  if (DOM.typeCountDoc) DOM.typeCountDoc.textContent = docCount;
+  if (DOM.typeCountOther) DOM.typeCountOther.textContent = otherCount;
+
+  // Calculate total size
+  const totalBytes = resources.reduce((acc, r) => acc + (r.size || 0), 0);
+  const formattedTotalSize = formatFileSize(totalBytes);
+  if (DOM.resourcesStatsOverview) {
+    DOM.resourcesStatsOverview.textContent = `${totalCount} Resource${totalCount === 1 ? '' : 's'} (${formattedTotalSize}) • ${pdfCount} PDFs • ${imgCount} Images • ${docCount} Docs`;
+  }
+
+  // Filter by Paper
+  let filtered = [...resources];
+  if (STATE.activePaper !== 'ALL') {
+    filtered = filtered.filter(r => r.paper === STATE.activePaper || r.paper === 'ALL');
+  }
+
+  // Filter by File Type Pill
+  if (STATE.activeResourceTypeFilter !== 'all') {
+    if (STATE.activeResourceTypeFilter === 'doc') {
+      filtered = filtered.filter(r => r.typeGroup === 'doc' || r.typeGroup === 'sheet');
+    } else if (STATE.activeResourceTypeFilter === 'other') {
+      filtered = filtered.filter(r => !['pdf', 'image', 'doc', 'sheet'].includes(r.typeGroup));
+    } else {
+      filtered = filtered.filter(r => r.typeGroup === STATE.activeResourceTypeFilter);
+    }
+  }
+
+  // Filter by Search Query
+  const q = (STATE.resourceSearchQuery || STATE.searchQuery || '').trim().toLowerCase();
+  if (q) {
+    filtered = filtered.filter(r => {
+      return (
+        (r.title && r.title.toLowerCase().includes(q)) ||
+        (r.fileName && r.fileName.toLowerCase().includes(q)) ||
+        (r.category && r.category.toLowerCase().includes(q)) ||
+        (r.unit && r.unit.toLowerCase().includes(q)) ||
+        (r.description && r.description.toLowerCase().includes(q))
+      );
+    });
+  }
+
+  // Sort
+  if (STATE.resourceSortBy === 'newest') {
+    filtered.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  } else if (STATE.resourceSortBy === 'oldest') {
+    filtered.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  } else if (STATE.resourceSortBy === 'name') {
+    filtered.sort((a, b) => (a.title || a.fileName || '').localeCompare(b.title || b.fileName || ''));
+  } else if (STATE.resourceSortBy === 'size-desc') {
+    filtered.sort((a, b) => (b.size || 0) - (a.size || 0));
+  } else if (STATE.resourceSortBy === 'size-asc') {
+    filtered.sort((a, b) => (a.size || 0) - (b.size || 0));
+  }
+
+  // Empty state handling
+  if (filtered.length === 0) {
+    if (DOM.resourcesEmptyState) DOM.resourcesEmptyState.style.display = 'block';
+    return;
+  }
+  if (DOM.resourcesEmptyState) DOM.resourcesEmptyState.style.display = 'none';
+
+  // Render cards
+  filtered.forEach(res => {
+    const card = document.createElement('div');
+    card.className = `resource-card type-${res.typeGroup || 'other'}`;
+    card.id = `res-card-${res.id}`;
+
+    // Type badge label & icon
+    let typeBadgeText = 'FILE';
+    let typeBadgeClass = 'badge-other';
+    if (res.typeGroup === 'pdf') {
+      typeBadgeText = '📄 PDF';
+      typeBadgeClass = 'badge-pdf';
+    } else if (res.typeGroup === 'image') {
+      typeBadgeText = '🖼️ IMAGE';
+      typeBadgeClass = 'badge-image';
+    } else if (res.typeGroup === 'doc') {
+      typeBadgeText = '📑 DOC';
+      typeBadgeClass = 'badge-doc';
+    } else if (res.typeGroup === 'sheet') {
+      typeBadgeText = '📊 DATA';
+      typeBadgeClass = 'badge-sheet';
+    } else if (res.typeGroup === 'archive') {
+      typeBadgeText = '📦 ZIP';
+      typeBadgeClass = 'badge-archive';
+    } else if (res.typeGroup === 'audio') {
+      typeBadgeText = '🎵 AUDIO';
+      typeBadgeClass = 'badge-audio';
+    }
+
+    // Paper Tag
+    const paperTagClass = res.paper === 'P1' ? 'tag-p1' : (res.paper === 'P2' ? 'tag-p2' : 'tag-all');
+    const paperTagText = res.paper === 'P1' ? 'Paper 1' : (res.paper === 'P2' ? 'Paper 2' : 'All Papers');
+
+    // Date
+    const dateStr = new Date(res.updatedAt || res.createdAt || Date.now()).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+
+    // Media Preview Stage
+    let previewStageHtml = '';
+    if (res.typeGroup === 'image') {
+      const imgSrc = res.thumbnail || res.dataUrl || '';
+      previewStageHtml = `
+        <div class="resource-preview-stage" title="Click to inspect image in full resolution">
+          <img class="resource-img-thumb" src="${imgSrc || 'data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\'><text y=\'50\' font-size=\'30\'>🖼️</text></svg>'}" alt="${escapeHtml(res.title)}" />
+        </div>
+      `;
+    } else if (res.typeGroup === 'pdf') {
+      previewStageHtml = `
+        <div class="resource-preview-stage" title="Click to preview PDF document">
+          <div class="resource-pdf-preview-box">
+            <span class="pdf-icon-large">📄</span>
+            <span class="pdf-click-hint">Click to Preview PDF</span>
+          </div>
+        </div>
+      `;
+    } else {
+      let icon = '📎';
+      if (res.typeGroup === 'doc') icon = '📑';
+      if (res.typeGroup === 'sheet') icon = '📊';
+      if (res.typeGroup === 'archive') icon = '📦';
+      if (res.typeGroup === 'audio') icon = '🎵';
+
+      previewStageHtml = `
+        <div class="resource-preview-stage" title="Click to view file details">
+          <div class="resource-file-preview-box">
+            <span class="file-icon-large">${icon}</span>
+            <span class="file-click-hint">Click to Preview File</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // Highlight search match in title
+    const highlightedTitle = q ? highlightSearchMatch(res.title || res.fileName, q) : escapeHtml(res.title || res.fileName);
+
+    card.innerHTML = `
+      <div class="resource-card-header">
+        <div class="resource-card-badges">
+          <span class="resource-type-tag ${typeBadgeClass}">${typeBadgeText}</span>
+          <span class="resource-paper-tag ${paperTagClass}">${paperTagText}</span>
+        </div>
+        <div class="resource-card-actions">
+          <button type="button" class="btn-card-action res-preview-btn" title="Preview / View file" aria-label="Preview">👁️</button>
+          <button type="button" class="btn-card-action res-download-btn" title="Download file" aria-label="Download">⬇️</button>
+          <button type="button" class="btn-card-action res-edit-btn" title="Edit resource details" aria-label="Edit">✏️</button>
+          <button type="button" class="btn-card-action res-delete-btn" title="Delete resource" aria-label="Delete">🗑️</button>
+        </div>
+      </div>
+
+      ${previewStageHtml}
+
+      <div class="resource-card-content">
+        <div class="resource-card-title">${highlightedTitle}</div>
+        <div class="resource-file-name-row">
+          <span>📎</span>
+          <span style="overflow: hidden; text-overflow: ellipsis;">${escapeHtml(res.fileName || 'file')}</span>
+          <span class="resource-size-pill">${res.sizeFormatted || formatFileSize(res.size)}</span>
+        </div>
+
+        <div class="resource-card-meta-row">
+          ${res.category ? `<span class="resource-cat-tag">${escapeHtml(res.category)}</span>` : ''}
+          ${res.unit ? `<span class="resource-unit-tag">${escapeHtml(res.unit)}</span>` : ''}
+        </div>
+
+        ${res.description ? `<div class="resource-card-desc">${escapeHtml(res.description)}</div>` : ''}
+      </div>
+
+      <div class="resource-card-footer">
+        <span class="resource-date-str">🕒 ${dateStr}</span>
+        <div class="resource-footer-buttons">
+          <button type="button" class="btn-card-preview res-preview-btn">👁️ Preview</button>
+          <button type="button" class="btn-card-download res-download-btn">⬇️ Download</button>
+        </div>
+      </div>
+    `;
+
+    // Event listeners
+    card.querySelectorAll('.res-preview-btn').forEach(b => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openResourcePreview(res.id);
+    }));
+
+    const stage = card.querySelector('.resource-preview-stage');
+    if (stage) {
+      stage.addEventListener('click', () => openResourcePreview(res.id));
+    }
+
+    card.querySelectorAll('.res-download-btn').forEach(b => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      downloadResource(res.id);
+    }));
+
+    card.querySelectorAll('.res-edit-btn').forEach(b => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openEditResourceModal(res.id);
+    }));
+
+    card.querySelectorAll('.res-delete-btn').forEach(b => b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteResource(res.id);
+    }));
+
+    DOM.resourcesContainer.appendChild(card);
+  });
+}
+
+function openAddResourceModal(preloadedFile = null) {
+  STATE.editingResourceId = null;
+  STATE.currentSelectedUploadFile = null;
+
+  if (DOM.resourceForm) DOM.resourceForm.reset();
+  if (DOM.resourceIdInput) DOM.resourceIdInput.value = '';
+  if (DOM.resourceModalTitle) DOM.resourceModalTitle.innerHTML = '<span>📁</span> Upload Study Resource';
+  if (DOM.resourcePaperInput) DOM.resourcePaperInput.value = STATE.activePaper !== 'ALL' ? STATE.activePaper : 'ALL';
+
+  // Modal file picker state
+  if (DOM.modalFileSelectGroup) DOM.modalFileSelectGroup.style.display = 'block';
+  if (DOM.modalFilePrompt) DOM.modalFilePrompt.style.display = 'flex';
+  if (DOM.modalFileSelected) DOM.modalFileSelected.style.display = 'none';
+
+  if (preloadedFile) {
+    handleModalFilePicked(preloadedFile);
+  }
+
+  if (DOM.resourceModal) {
+    DOM.resourceModal.classList.add('open');
+    pushModalHistory('resourceModal');
+    if (DOM.resourceTitleInput) DOM.resourceTitleInput.focus();
+  }
+}
+
+function openEditResourceModal(resourceId) {
+  const res = STATE.resources.find(r => r.id === resourceId);
+  if (!res) return;
+
+  STATE.editingResourceId = resourceId;
+  STATE.currentSelectedUploadFile = null;
+
+  if (DOM.resourceForm) DOM.resourceForm.reset();
+  if (DOM.resourceIdInput) DOM.resourceIdInput.value = res.id;
+  if (DOM.resourceModalTitle) DOM.resourceModalTitle.innerHTML = '<span>✏️</span> Edit Resource Details';
+  if (DOM.resourceTitleInput) DOM.resourceTitleInput.value = res.title || '';
+  if (DOM.resourcePaperInput) DOM.resourcePaperInput.value = res.paper || 'ALL';
+  if (DOM.resourceCategoryInput) DOM.resourceCategoryInput.value = res.category || 'PDF Document';
+  if (DOM.resourceUnitInput) DOM.resourceUnitInput.value = res.unit || '';
+  if (DOM.resourceDescInput) DOM.resourceDescInput.value = res.description || '';
+
+  // Show selected file indicator
+  if (DOM.modalFilePrompt) DOM.modalFilePrompt.style.display = 'none';
+  if (DOM.modalFileSelected) DOM.modalFileSelected.style.display = 'flex';
+  if (DOM.modalSelectedFileName) DOM.modalSelectedFileName.textContent = res.fileName || 'file';
+  if (DOM.modalSelectedFileMeta) DOM.modalSelectedFileMeta.textContent = `${res.sizeFormatted || formatFileSize(res.size)} • ${res.mimeType || 'file'}`;
+  if (DOM.modalSelectedBadge) DOM.modalSelectedBadge.textContent = res.extension ? res.extension.toUpperCase() : 'FILE';
+
+  if (DOM.resourceModal) {
+    DOM.resourceModal.classList.add('open');
+    pushModalHistory('resourceModal');
+    if (DOM.resourceTitleInput) DOM.resourceTitleInput.focus();
+  }
+}
+
+function closeResourceModal(triggerHistoryBack = false) {
+  if (DOM.resourceModal) {
+    DOM.resourceModal.classList.remove('open');
+  }
+  if (DOM.resourceForm) DOM.resourceForm.reset();
+  STATE.editingResourceId = null;
+  STATE.currentSelectedUploadFile = null;
+
+  if (triggerHistoryBack && window.history && window.history.state && window.history.state.modalOpen) {
+    window.history.back();
+  }
+}
+
+function handleModalFilePicked(file) {
+  if (!file) return;
+  STATE.currentSelectedUploadFile = file;
+
+  if (DOM.modalFilePrompt) DOM.modalFilePrompt.style.display = 'none';
+  if (DOM.modalFileSelected) DOM.modalFileSelected.style.display = 'flex';
+  if (DOM.modalSelectedFileName) DOM.modalSelectedFileName.textContent = file.name;
+  if (DOM.modalSelectedFileMeta) DOM.modalSelectedFileMeta.textContent = `${formatFileSize(file.size)} • ${file.type || 'unknown type'}`;
+
+  const ext = file.name.split('.').pop().toUpperCase();
+  if (DOM.modalSelectedBadge) DOM.modalSelectedBadge.textContent = ext || 'FILE';
+
+  // Auto populate title if title field is currently blank
+  if (DOM.resourceTitleInput && !DOM.resourceTitleInput.value.trim()) {
+    const cleanTitle = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
+    DOM.resourceTitleInput.value = cleanTitle;
+  }
+
+  // Auto detect category
+  if (DOM.resourceCategoryInput) {
+    const group = getFileTypeGroup(file.name, file.type);
+    if (group === 'pdf') DOM.resourceCategoryInput.value = 'PDF Document';
+    else if (group === 'image') DOM.resourceCategoryInput.value = 'Diagram / Chart';
+    else if (group === 'sheet') DOM.resourceCategoryInput.value = 'Formula Sheet';
+  }
+}
+
+async function saveResourceForm(e) {
+  if (e) e.preventDefault();
+
+  const title = (DOM.resourceTitleInput ? DOM.resourceTitleInput.value : '').trim();
+  if (!title) {
+    showToast('Please enter a Resource Title.', 'error');
+    if (DOM.resourceTitleInput) DOM.resourceTitleInput.focus();
+    return;
+  }
+
+  const paper = DOM.resourcePaperInput ? DOM.resourcePaperInput.value : 'ALL';
+  const category = DOM.resourceCategoryInput ? DOM.resourceCategoryInput.value : 'PDF Document';
+  const unit = (DOM.resourceUnitInput ? DOM.resourceUnitInput.value : '').trim();
+  const desc = (DOM.resourceDescInput ? DOM.resourceDescInput.value : '').trim();
+
+  // If editing an existing resource
+  if (STATE.editingResourceId) {
+    const idx = STATE.resources.findIndex(r => r.id === STATE.editingResourceId);
+    if (idx !== -1) {
+      STATE.resources[idx].title = title;
+      STATE.resources[idx].paper = paper;
+      STATE.resources[idx].category = category;
+      STATE.resources[idx].unit = unit;
+      STATE.resources[idx].description = desc;
+      STATE.resources[idx].updatedAt = Date.now();
+
+      // If user also replaced the file
+      if (STATE.currentSelectedUploadFile) {
+        const file = STATE.currentSelectedUploadFile;
+        const group = getFileTypeGroup(file.name, file.type);
+        const ext = file.name.split('.').pop().toLowerCase();
+        let thumb = '';
+        if (group === 'image') {
+          thumb = await generateImageThumbnail(file);
+        }
+
+        const fileDataUrl = await readFileAsDataURL(file);
+        await IdbResourceStore.saveFile(STATE.editingResourceId, fileDataUrl, file.type, file.name);
+
+        STATE.resources[idx].fileName = file.name;
+        STATE.resources[idx].size = file.size;
+        STATE.resources[idx].sizeFormatted = formatFileSize(file.size);
+        STATE.resources[idx].mimeType = file.type || 'application/octet-stream';
+        STATE.resources[idx].extension = ext;
+        STATE.resources[idx].typeGroup = group;
+        if (thumb) STATE.resources[idx].thumbnail = thumb;
+      }
+
+      saveResources();
+      renderResources();
+      updateBadges();
+      syncGlobally();
+      closeResourceModal();
+      showToast(`Updated resource: "${title}"`, 'success');
+      return;
+    }
+  }
+
+  // Adding a new resource
+  const file = STATE.currentSelectedUploadFile;
+  if (!file) {
+    showToast('Please select a file to upload.', 'error');
+    return;
+  }
+
+  const resId = 'res-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+  const group = getFileTypeGroup(file.name, file.type);
+  const ext = file.name.split('.').pop().toLowerCase();
+
+  let thumb = '';
+  if (group === 'image') {
+    thumb = await generateImageThumbnail(file);
+  }
+
+  const fileDataUrl = await readFileAsDataURL(file);
+  await IdbResourceStore.saveFile(resId, fileDataUrl, file.type, file.name);
+
+  const newResource = {
+    id: resId,
+    title,
+    fileName: file.name,
+    size: file.size,
+    sizeFormatted: formatFileSize(file.size),
+    mimeType: file.type || 'application/octet-stream',
+    extension: ext,
+    typeGroup: group,
+    paper,
+    category,
+    unit,
+    description: desc,
+    thumbnail: thumb,
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+
+  STATE.resources.unshift(newResource);
+  saveResources();
+  renderResources();
+  updateBadges();
+  syncGlobally();
+  closeResourceModal();
+  showToast(`Uploaded "${title}" successfully!`, 'success');
+}
+
+async function handleBatchResourceFiles(fileList) {
+  if (!fileList || fileList.length === 0) return;
+  const files = Array.from(fileList);
+
+  if (files.length === 1) {
+    openAddResourceModal(files[0]);
+    return;
+  }
+
+  showToast(`Uploading ${files.length} files...`, 'info');
+
+  for (const file of files) {
+    const resId = 'res-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+    const group = getFileTypeGroup(file.name, file.type);
+    const ext = file.name.split('.').pop().toLowerCase();
+    const cleanTitle = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
+
+    let thumb = '';
+    if (group === 'image') {
+      thumb = await generateImageThumbnail(file);
+    }
+
+    const fileDataUrl = await readFileAsDataURL(file);
+    await IdbResourceStore.saveFile(resId, fileDataUrl, file.type, file.name);
+
+    let category = 'Other Resource';
+    if (group === 'pdf') category = 'PDF Document';
+    else if (group === 'image') category = 'Diagram / Chart';
+    else if (group === 'sheet') category = 'Formula Sheet';
+    else if (group === 'doc') category = 'Handout / Book Chapter';
+
+    const newResource = {
+      id: resId,
+      title: cleanTitle,
+      fileName: file.name,
+      size: file.size,
+      sizeFormatted: formatFileSize(file.size),
+      mimeType: file.type || 'application/octet-stream',
+      extension: ext,
+      typeGroup: group,
+      paper: STATE.activePaper !== 'ALL' ? STATE.activePaper : 'ALL',
+      category,
+      unit: '',
+      description: '',
+      thumbnail: thumb,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    STATE.resources.unshift(newResource);
+  }
+
+  saveResources();
+  renderResources();
+  updateBadges();
+  syncGlobally();
+  showToast(`Successfully added ${files.length} resources!`, 'success');
+}
+
+async function deleteResource(resourceId) {
+  const res = STATE.resources.find(r => r.id === resourceId);
+  if (!res) return;
+
+  if (!confirm(`Are you sure you want to delete "${res.title}"?`)) {
+    return;
+  }
+
+  STATE.resources = STATE.resources.filter(r => r.id !== resourceId);
+  await IdbResourceStore.deleteFile(resourceId);
+
+  saveResources();
+  renderResources();
+  updateBadges();
+  syncGlobally();
+  showToast(`Deleted resource: "${res.title}"`, 'info');
+}
+
+async function downloadResource(resourceId) {
+  const res = STATE.resources.find(r => r.id === resourceId);
+  if (!res) return;
+
+  let data = await IdbResourceStore.getFile(resourceId);
+  if (!data && (res.thumbnail || res.dataUrl)) {
+    data = res.thumbnail || res.dataUrl;
+  }
+
+  if (!data) {
+    const sampleText = `${res.title}\n${res.description || ''}\nPaper: ${res.paper}\nCategory: ${res.category}\nUnit: ${res.unit}\n\nGenerated by NathKhat Revision Hub`;
+    const blob = new Blob([sampleText], { type: res.mimeType || 'text/plain' });
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = res.fileName || 'resource.txt';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+    }, 1000);
+    showToast(`Downloaded: ${res.fileName}`, 'success');
+    return;
+  }
+
+  const a = document.createElement('a');
+  a.href = data;
+  a.download = res.fileName || 'download';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => a.remove(), 1000);
+  showToast(`Downloaded: ${res.fileName}`, 'success');
+}
+
+async function openResourcePreview(resourceId) {
+  const res = STATE.resources.find(r => r.id === resourceId);
+  if (!res) return;
+
+  STATE.activePreviewResourceId = resourceId;
+
+  if (DOM.previewModalTitle) DOM.previewModalTitle.textContent = res.title;
+  if (DOM.previewMetaSub) DOM.previewMetaSub.textContent = `${res.fileName} • ${res.sizeFormatted || formatFileSize(res.size)} • ${res.paper}`;
+  if (DOM.previewTypeBadge) DOM.previewTypeBadge.textContent = res.extension ? res.extension.toUpperCase() : 'FILE';
+
+  if (!DOM.resourcePreviewBody) return;
+  DOM.resourcePreviewBody.innerHTML = '<div style="padding: 2rem; color: var(--text-dim);">Loading preview...</div>';
+
+  let data = await IdbResourceStore.getFile(resourceId);
+  if (!data && (res.thumbnail || res.dataUrl)) {
+    data = res.thumbnail || res.dataUrl;
+  }
+
+  if (DOM.previewOpenNewTabBtn) {
+    DOM.previewOpenNewTabBtn.onclick = () => {
+      if (data) {
+        const newWin = window.open();
+        if (newWin) {
+          if (res.typeGroup === 'pdf' || res.typeGroup === 'image') {
+            newWin.document.write(`<iframe src="${data}" frameborder="0" style="border:0; top:0; left:0; bottom:0; right:0; width:100%; height:100%;" allowfullscreen></iframe>`);
+          } else {
+            newWin.document.write(`<pre style="font-family: monospace; padding: 20px; white-space: pre-wrap;">${escapeHtml(res.description || res.title)}</pre>`);
+          }
+        }
+      } else {
+        downloadResource(resourceId);
+      }
+    };
+  }
+
+  if (DOM.previewDownloadBtn) {
+    DOM.previewDownloadBtn.onclick = () => downloadResource(resourceId);
+  }
+
+  if (res.typeGroup === 'image') {
+    const imgSrc = data || res.thumbnail || '';
+    DOM.resourcePreviewBody.innerHTML = `
+      <img class="image-preview-full" src="${imgSrc}" alt="${escapeHtml(res.title)}" />
+    `;
+  } else if (res.typeGroup === 'pdf') {
+    if (data && data.startsWith('data:')) {
+      DOM.resourcePreviewBody.innerHTML = `
+        <iframe class="pdf-preview-iframe" src="${data}" title="${escapeHtml(res.title)}"></iframe>
+      `;
+    } else {
+      DOM.resourcePreviewBody.innerHTML = `
+        <div class="generic-file-view">
+          <span class="generic-file-icon">📄</span>
+          <div class="generic-file-title">${escapeHtml(res.title)}</div>
+          <div class="generic-file-specs">${escapeHtml(res.fileName)} • ${res.sizeFormatted || formatFileSize(res.size)}</div>
+          <p style="color: var(--text-muted); max-width: 500px; line-height: 1.6;">${escapeHtml(res.description || 'PDF Document ready for exam revision.')}</p>
+          <div style="display: flex; gap: 0.75rem; margin-top: 1rem;">
+            <button type="button" class="btn-primary" onclick="downloadResource('${res.id}')">⬇️ Download PDF</button>
+          </div>
+        </div>
+      `;
+    }
+  } else if (res.typeGroup === 'doc' && (res.extension === 'txt' || res.extension === 'md')) {
+    let textContent = res.description || 'Text content';
+    if (data && data.startsWith('data:text')) {
+      try {
+        const base64Part = data.split(',')[1];
+        textContent = decodeURIComponent(escape(atob(base64Part)));
+      } catch (e) {
+        textContent = data;
+      }
+    }
+    DOM.resourcePreviewBody.innerHTML = `
+      <pre class="text-preview-code"><code>${escapeHtml(textContent)}</code></pre>
+    `;
+  } else if (res.typeGroup === 'audio') {
+    DOM.resourcePreviewBody.innerHTML = `
+      <div class="media-preview-container">
+        <span style="font-size: 3.5rem;">🎵</span>
+        <div class="generic-file-title">${escapeHtml(res.title)}</div>
+        <audio controls src="${data || ''}" style="width: 100%; max-width: 480px;"></audio>
+      </div>
+    `;
+  } else {
+    let fileIcon = '📁';
+    if (res.typeGroup === 'doc') fileIcon = '📑';
+    if (res.typeGroup === 'sheet') fileIcon = '📊';
+    if (res.typeGroup === 'archive') fileIcon = '📦';
+
+    DOM.resourcePreviewBody.innerHTML = `
+      <div class="generic-file-view">
+        <span class="generic-file-icon">${fileIcon}</span>
+        <div class="generic-file-title">${escapeHtml(res.title)}</div>
+        <div class="generic-file-specs">${escapeHtml(res.fileName)} • ${res.sizeFormatted || formatFileSize(res.size)} • ${res.mimeType || 'file'}</div>
+        ${res.description ? `<p style="color: var(--text-muted); max-width: 550px; line-height: 1.6;">${escapeHtml(res.description)}</p>` : ''}
+        <button type="button" class="btn-primary" style="margin-top: 1rem;" onclick="downloadResource('${res.id}')">
+          <span>⬇️</span> Download File
+        </button>
+      </div>
+    `;
+  }
+
+  if (DOM.resourcePreviewModal) {
+    DOM.resourcePreviewModal.classList.add('open');
+    pushModalHistory('resourcePreviewModal');
+  }
+}
+
+function closeResourcePreview(triggerHistoryBack = false) {
+  if (DOM.resourcePreviewModal) {
+    DOM.resourcePreviewModal.classList.remove('open');
+  }
+  if (DOM.resourcePreviewBody) {
+    DOM.resourcePreviewBody.innerHTML = '';
+  }
+  STATE.activePreviewResourceId = null;
+
+  if (triggerHistoryBack && window.history && window.history.state && window.history.state.modalOpen) {
+    window.history.back();
+  }
+}
+
+function setupResourceEventListeners() {
+  // Navigation tab
+  if (DOM.tabResourcesView) {
+    DOM.tabResourcesView.addEventListener('click', () => switchView('resourcesView'));
+  }
+
+  // Open Upload Modal Buttons
+  if (DOM.openUploadResourceBtn) {
+    DOM.openUploadResourceBtn.addEventListener('click', () => openAddResourceModal());
+  }
+  if (DOM.emptyStateUploadBtn) {
+    DOM.emptyStateUploadBtn.addEventListener('click', () => openAddResourceModal());
+  }
+
+  // Modal Close & Form
+  if (DOM.closeResourceModalBtn) {
+    DOM.closeResourceModalBtn.addEventListener('click', () => closeResourceModal(false));
+  }
+  if (DOM.cancelResourceModalBtn) {
+    DOM.cancelResourceModalBtn.addEventListener('click', () => closeResourceModal(false));
+  }
+  if (DOM.saveResourceBtn) {
+    DOM.saveResourceBtn.addEventListener('click', saveResourceForm);
+  }
+  if (DOM.resourceForm) {
+    DOM.resourceForm.addEventListener('submit', saveResourceForm);
+  }
+
+  // Modal File Selector
+  if (DOM.modalFileDropzone) {
+    DOM.modalFileDropzone.addEventListener('click', (e) => {
+      if (e.target.id === 'modalChangeFileBtn' || !e.target.closest('#modalChangeFileBtn')) {
+        if (DOM.modalFileInput) DOM.modalFileInput.click();
+      }
+    });
+  }
+  if (DOM.modalFileInput) {
+    DOM.modalFileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        handleModalFilePicked(e.target.files[0]);
+      }
+    });
+  }
+  if (DOM.modalChangeFileBtn) {
+    DOM.modalChangeFileBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (DOM.modalFileInput) DOM.modalFileInput.click();
+    });
+  }
+
+  // Drag and Drop on Modal Dropzone
+  if (DOM.modalFileDropzone) {
+    DOM.modalFileDropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      DOM.modalFileDropzone.style.borderColor = 'var(--primary)';
+    });
+    DOM.modalFileDropzone.addEventListener('dragleave', () => {
+      DOM.modalFileDropzone.style.borderColor = '';
+    });
+    DOM.modalFileDropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      DOM.modalFileDropzone.style.borderColor = '';
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        handleModalFilePicked(e.dataTransfer.files[0]);
+      }
+    });
+  }
+
+  // Interactive Big Dropzone on Resources View
+  if (DOM.resourcesDropzone) {
+    DOM.resourcesDropzone.addEventListener('click', (e) => {
+      if (e.target.id === 'dropzoneBrowseBtn' || !e.target.closest('#dropzoneBrowseBtn')) {
+        if (DOM.resourceDropInput) DOM.resourceDropInput.click();
+      }
+    });
+
+    ['dragenter', 'dragover'].forEach(evt => {
+      DOM.resourcesDropzone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        DOM.resourcesDropzone.classList.add('dragover');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(evt => {
+      DOM.resourcesDropzone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        DOM.resourcesDropzone.classList.remove('dragover');
+      });
+    });
+
+    DOM.resourcesDropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handleBatchResourceFiles(e.dataTransfer.files);
+      }
+    });
+  }
+
+  if (DOM.resourceDropInput) {
+    DOM.resourceDropInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        handleBatchResourceFiles(e.target.files);
+        e.target.value = '';
+      }
+    });
+  }
+
+  if (DOM.dropzoneBrowseBtn) {
+    DOM.dropzoneBrowseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (DOM.resourceDropInput) DOM.resourceDropInput.click();
+    });
+  }
+
+  // Type Filter Pills
+  const pills = [
+    { el: DOM.pillTypeAll, val: 'all' },
+    { el: DOM.pillTypePdf, val: 'pdf' },
+    { el: DOM.pillTypeImage, val: 'image' },
+    { el: DOM.pillTypeDoc, val: 'doc' },
+    { el: DOM.pillTypeOther, val: 'other' }
+  ];
+
+  pills.forEach(p => {
+    if (p.el) {
+      p.el.addEventListener('click', () => {
+        STATE.activeResourceTypeFilter = p.val;
+        pills.forEach(item => {
+          if (item.el) {
+            if (item.val === p.val) item.el.classList.add('active');
+            else item.el.classList.remove('active');
+          }
+        });
+        renderResources();
+      });
+    }
+  });
+
+  // Resource Search Input
+  if (DOM.resourceSearchInput) {
+    DOM.resourceSearchInput.addEventListener('input', (e) => {
+      STATE.resourceSearchQuery = e.target.value;
+      if (DOM.clearResourceSearchBtn) {
+        DOM.clearResourceSearchBtn.style.display = STATE.resourceSearchQuery ? 'block' : 'none';
+      }
+      renderResources();
+    });
+  }
+
+  if (DOM.clearResourceSearchBtn) {
+    DOM.clearResourceSearchBtn.addEventListener('click', () => {
+      STATE.resourceSearchQuery = '';
+      if (DOM.resourceSearchInput) DOM.resourceSearchInput.value = '';
+      DOM.clearResourceSearchBtn.style.display = 'none';
+      renderResources();
+    });
+  }
+
+  // Resource Sorting
+  if (DOM.resourceSortSelect) {
+    DOM.resourceSortSelect.addEventListener('change', (e) => {
+      STATE.resourceSortBy = e.target.value;
+      renderResources();
+    });
+  }
+
+  // Preview Modal Close
+  if (DOM.closeResourcePreviewBtn) {
+    DOM.closeResourcePreviewBtn.addEventListener('click', () => closeResourcePreview(false));
+  }
+
+  // Paste shortcut (Ctrl+V) when in Resources view
+  window.addEventListener('paste', (e) => {
+    if (STATE.activeView !== 'resourcesView') return;
+    if (DOM.resourceModal && DOM.resourceModal.classList.contains('open')) return;
+
+    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    if (!items) return;
+
+    for (let index = 0; index < items.length; index++) {
+      const item = items[index];
+      if (item.kind === 'file') {
+        const blob = item.getAsFile();
+        if (blob) {
+          openAddResourceModal(blob);
+          showToast('File captured from clipboard!', 'info');
+          break;
+        }
+      }
+    }
+  });
+}
+
 
 /* ==========================================================================
    SECTION 4: Recycle Bin (Safe Trash & 1-Click Restore)
@@ -1539,11 +2650,12 @@ function closeBackupModal(triggerHistoryBack = false) {
 function exportBackupJson() {
   const data = {
     app: 'NathKhat UGC NET Revision Hub',
-    version: '1.0.0',
+    version: '2.8.0',
     exportDate: new Date().toISOString(),
     topics: STATE.topics,
     bin: STATE.bin,
     notes: STATE.notes,
+    resources: STATE.resources,
     notepad: STATE.notepad
   };
 
@@ -1578,16 +2690,21 @@ function importBackupJson(e) {
             updatedAt: Date.now()
           }];
         }
+        if (Array.isArray(parsed.resources)) {
+          STATE.resources = parsed.resources;
+        }
 
         saveTopics();
         saveBin();
         saveNotes();
+        saveResources();
         syncGlobally();
 
         updateBadges();
         renderIndex();
         renderTopics();
         renderNotepad();
+        renderResources();
         renderBin();
 
         closeBackupModal();
@@ -1628,6 +2745,7 @@ function setupEventListeners() {
     DOM.clearSearchBtn.style.display = STATE.searchQuery ? 'block' : 'none';
     renderIndex();
     renderTopics();
+    if (DOM.resourcesView) renderResources();
   });
 
   DOM.clearSearchBtn.addEventListener('click', () => {
@@ -1636,6 +2754,7 @@ function setupEventListeners() {
     DOM.clearSearchBtn.style.display = 'none';
     renderIndex();
     renderTopics();
+    if (DOM.resourcesView) renderResources();
     DOM.globalSearchInput.focus();
   });
 
@@ -1646,13 +2765,17 @@ function setupEventListeners() {
         document.activeElement !== DOM.topicExplanationEditor &&
         document.activeElement !== DOM.noteExplanationEditor &&
         document.activeElement !== DOM.noteTitleInput &&
-        document.activeElement !== DOM.noteTagInput) {
+        document.activeElement !== DOM.noteTagInput &&
+        document.activeElement !== DOM.resourceTitleInput &&
+        document.activeElement !== DOM.resourceSearchInput) {
       e.preventDefault();
       DOM.globalSearchInput.focus();
     }
     if (e.key === 'Escape') {
       closeTopicModal();
       closeNoteModal();
+      closeResourceModal();
+      closeResourcePreview();
       closeBackupModal();
       closeMobileIndex();
     }
@@ -1667,7 +2790,11 @@ function setupEventListeners() {
   // Section Tabs Navigation
   DOM.tabTopicsView.addEventListener('click', () => switchView('topicsView'));
   DOM.tabNotepadView.addEventListener('click', () => switchView('notepadView'));
+  if (DOM.tabResourcesView) DOM.tabResourcesView.addEventListener('click', () => switchView('resourcesView'));
   DOM.tabBinView.addEventListener('click', () => switchView('binView'));
+
+  // Setup Resources Event Listeners
+  setupResourceEventListeners();
 
   // Sort Selection
   DOM.sortSelect.addEventListener('change', (e) => {
@@ -1711,9 +2838,10 @@ function setupEventListeners() {
     copyClipboardDataBtn.addEventListener('click', () => {
       const exportData = {
         app: 'NathKhat',
-        version: '2.7',
+        version: '2.8',
         topics: STATE.topics,
         notes: STATE.notes,
+        resources: STATE.resources,
         bin: STATE.bin
       };
       const text = JSON.stringify(exportData, null, 2);
@@ -1769,11 +2897,24 @@ function setupEventListeners() {
             });
             saveNotes();
           }
+          if (Array.isArray(parsed.resources)) {
+            parsed.resources.forEach(rr => {
+              if (!rr || !rr.id) return;
+              const idx = STATE.resources.findIndex(r => r.id === rr.id);
+              if (idx === -1) {
+                STATE.resources.unshift(rr);
+              } else if ((rr.updatedAt || 0) > (STATE.resources[idx].updatedAt || 0)) {
+                STATE.resources[idx] = rr;
+              }
+            });
+            saveResources();
+          }
           syncGlobally();
           updateBadges();
           renderIndex();
           renderTopics();
           renderNotes();
+          renderResources();
           closeBackupModal();
           showToast('Data merged successfully!', 'success');
         } else {
@@ -1814,7 +2955,7 @@ function setupEventListeners() {
   // Listen for browser back/forward or hash changes to sync view
   window.addEventListener('hashchange', () => {
     const hash = window.location.hash.replace('#', '');
-    if (['topicsView', 'notepadView', 'binView'].includes(hash) && STATE.activeView !== hash) {
+    if (['topicsView', 'notepadView', 'resourcesView', 'binView'].includes(hash) && STATE.activeView !== hash) {
       switchView(hash, false);
     }
   });
@@ -1848,13 +2989,25 @@ function initHistoryNavigation() {
       handled = true;
     }
 
-    // 3. If Backup modal is open -> close it!
+    // 3. If Resource Modal is open -> close it!
+    if (DOM.resourceModal && DOM.resourceModal.classList.contains('open')) {
+      closeResourceModal(false);
+      handled = true;
+    }
+
+    // 4. If Resource Preview Modal is open -> close it!
+    if (DOM.resourcePreviewModal && DOM.resourcePreviewModal.classList.contains('open')) {
+      closeResourcePreview(false);
+      handled = true;
+    }
+
+    // 5. If Backup modal is open -> close it!
     if (DOM.backupModal && DOM.backupModal.classList.contains('open')) {
       closeBackupModal(false);
       handled = true;
     }
 
-    // 4. If Mobile Index drawer is open -> close it!
+    // 6. If Mobile Index drawer is open -> close it!
     if (DOM.indexSidebar && DOM.indexSidebar.classList.contains('mobile-open')) {
       closeMobileIndex(false);
       handled = true;
@@ -1862,13 +3015,13 @@ function initHistoryNavigation() {
 
     if (handled) return;
 
-    // 5. If on secondary tab (Notepad, Bin) -> go back to Topics tab!
+    // 7. If on secondary tab (Notepad, Resources, Bin) -> go back to Topics tab!
     if (STATE.activeView !== 'topicsView') {
       switchView('topicsView', false);
       return;
     }
 
-    // 6. If already on Topics view, prevent exiting by re-pushing app state
+    // 8. If already on Topics view, prevent exiting by re-pushing app state
     if (window.history && window.history.pushState) {
       window.history.pushState({ app: 'nathkhat', view: 'topicsView' }, '');
     }
@@ -1925,6 +3078,7 @@ function syncGlobally() {
     SyncEngine.pushData({
       topics: STATE.topics,
       notes: STATE.notes,
+      resources: STATE.resources,
       bin: STATE.bin,
       updatedAt: now
     });
@@ -1947,6 +3101,7 @@ function onRemoteDataReceived(remote, source) {
   const hasContentDifferences = (
     (Array.isArray(remote.topics) && (remote.topics.length !== STATE.topics.length || JSON.stringify(remote.topics) !== JSON.stringify(STATE.topics))) ||
     (Array.isArray(remote.notes) && (remote.notes.length !== STATE.notes.length || JSON.stringify(remote.notes) !== JSON.stringify(STATE.notes))) ||
+    (Array.isArray(remote.resources) && (remote.resources.length !== STATE.resources.length || JSON.stringify(remote.resources) !== JSON.stringify(STATE.resources))) ||
     (Array.isArray(remote.bin) && (remote.bin.length !== STATE.bin.length))
   );
 
@@ -1966,6 +3121,10 @@ function onRemoteDataReceived(remote, source) {
       STATE.notes = remote.notes;
       localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(STATE.notes));
     }
+    if (Array.isArray(remote.resources)) {
+      STATE.resources = remote.resources;
+      localStorage.setItem(STORAGE_KEYS.RESOURCES, JSON.stringify(STATE.resources));
+    }
     if (Array.isArray(remote.bin)) {
       STATE.bin = remote.bin;
       localStorage.setItem(STORAGE_KEYS.BIN, JSON.stringify(STATE.bin));
@@ -1978,6 +3137,7 @@ function onRemoteDataReceived(remote, source) {
     renderIndex();
     renderTopics();
     renderNotes();
+    renderResources();
     renderBin();
   }
 }
@@ -2004,6 +3164,15 @@ function initCloudSync() {
           STATE.notes = updated;
           updateBadges();
           renderNotes();
+        }
+      } catch (err) {}
+    } else if (e.key === STORAGE_KEYS.RESOURCES && e.newValue) {
+      try {
+        const updated = JSON.parse(e.newValue);
+        if (Array.isArray(updated)) {
+          STATE.resources = updated;
+          updateBadges();
+          renderResources();
         }
       } catch (err) {}
     } else if (e.key === STORAGE_KEYS.BIN && e.newValue) {

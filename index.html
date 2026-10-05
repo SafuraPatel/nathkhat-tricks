@@ -97,6 +97,12 @@
           <span class="tab-label">Notes</span>
           <span class="tab-badge" id="notesCountBadge">0</span>
         </button>
+        <button type="button" class="nav-tab-btn" data-view="resourcesView" id="tabResourcesView" role="tab"
+          title="Resources (PDFs, Images, Documents, Files)">
+          <span class="tab-icon">📁</span>
+          <span class="tab-label">Resources</span>
+          <span class="tab-badge" id="resourcesCountBadge">0</span>
+        </button>
         <button type="button" class="nav-tab-btn" data-view="binView" id="tabBinView" role="tab" title="Recycle Bin">
           <span class="tab-icon">🗑️</span>
           <span class="tab-label">Bin</span>
@@ -211,6 +217,118 @@
             <p class="empty-desc">Create your quick revision notes, exam points, daily formulas, or key reminders here.
             </p>
             <button type="button" class="btn-primary" id="emptyStateAddNoteBtn">➕ Add First Note</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECTION: Study Resources & Files (PDFs, Images, Documents, Any Files) -->
+      <section class="section-view" id="resourcesView" role="tabpanel">
+        <div class="resources-container">
+          <!-- Resources Top Header & Toolbar -->
+          <div class="resources-toolbar">
+            <div class="resources-title-group">
+              <h2><span>📁</span> Study Resources &amp; Files</h2>
+              <p>Store, preview &amp; download PDFs, question papers, diagrams, cheat sheets and any study files</p>
+            </div>
+            <div class="resources-actions">
+              <input type="file" id="batchResourceFileInput" multiple style="display: none;" accept="*/*">
+              <button type="button" class="btn-primary" id="openUploadResourceBtn" title="Upload a new resource file">
+                <span>➕</span>
+                <span>Upload File</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Drag and Drop Interactive Upload Dropzone -->
+          <div class="resources-dropzone" id="resourcesDropzone">
+            <input type="file" id="resourceDropInput" multiple style="display: none;" accept="*/*">
+            <div class="dropzone-glow-ring"></div>
+            <div class="dropzone-icon-wrap">
+              <span class="dropzone-cloud-icon">☁️</span>
+              <span class="dropzone-arrow-icon">⬆️</span>
+            </div>
+            <div class="dropzone-text-content">
+              <h3 class="dropzone-heading">Drag &amp; drop any file here, or <button type="button" class="dropzone-browse-link" id="dropzoneBrowseBtn">browse device</button></h3>
+              <p class="dropzone-sub">Supports <strong>PDF documents</strong>, <strong>Images</strong> (PNG, JPG, SVG, WebP), <strong>Docs/Word/PPT/Excel</strong>, <strong>ZIP archives</strong>, audio, and any file format.</p>
+            </div>
+            <div class="dropzone-quick-chips">
+              <span class="chip-item">📄 PDF</span>
+              <span class="chip-item">🖼️ Image</span>
+              <span class="chip-item">📑 Document</span>
+              <span class="chip-item">📊 Spreadsheet</span>
+              <span class="chip-item">📦 Archive</span>
+              <span class="chip-item">📁 Any File</span>
+            </div>
+          </div>
+
+          <!-- Search, Type Filter Pills & Sorting Controls -->
+          <div class="resources-filters-bar">
+            <!-- Type Filters -->
+            <div class="resource-type-pills" role="group" aria-label="Filter by file type">
+              <button type="button" class="type-pill active" data-type="all" id="pillTypeAll">
+                <span>All</span>
+                <span class="pill-badge" id="typeCountAll">0</span>
+              </button>
+              <button type="button" class="type-pill" data-type="pdf" id="pillTypePdf">
+                <span>📄 PDFs</span>
+                <span class="pill-badge" id="typeCountPdf">0</span>
+              </button>
+              <button type="button" class="type-pill" data-type="image" id="pillTypeImage">
+                <span>🖼️ Images</span>
+                <span class="pill-badge" id="typeCountImage">0</span>
+              </button>
+              <button type="button" class="type-pill" data-type="doc" id="pillTypeDoc">
+                <span>📑 Documents</span>
+                <span class="pill-badge" id="typeCountDoc">0</span>
+              </button>
+              <button type="button" class="type-pill" data-type="other" id="pillTypeOther">
+                <span>📦 Other</span>
+                <span class="pill-badge" id="typeCountOther">0</span>
+              </button>
+            </div>
+
+            <!-- Resource Search Bar -->
+            <div class="resource-search-wrap">
+              <span class="resource-search-icon">🔍</span>
+              <input type="text" id="resourceSearchInput" class="resource-search-input"
+                placeholder="Search resources by title, file name, unit, or category..." autocomplete="off">
+              <button type="button" id="clearResourceSearchBtn" class="clear-search-btn" style="display: none;" title="Clear search">✕</button>
+            </div>
+
+            <!-- Sorting Select -->
+            <div class="resource-sort-wrap">
+              <select id="resourceSortSelect" class="sort-select" title="Sort resources">
+                <option value="newest">🕒 Newest Uploads First</option>
+                <option value="oldest">⏳ Oldest First</option>
+                <option value="name">🔤 File Name (A - Z)</option>
+                <option value="size-desc">📦 Size: Largest First</option>
+                <option value="size-asc">⚡ Size: Smallest First</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Resource Storage Stats Strip -->
+          <div class="resources-stats-strip" id="resourcesStatsStrip">
+            <div class="stats-left">
+              <span class="stats-icon">📊</span>
+              <span id="resourcesStatsOverview">0 Files</span>
+            </div>
+            <div class="stats-right">
+              <span class="stats-pill-info">💡 1-Click Preview &amp; Download</span>
+            </div>
+          </div>
+
+          <!-- Dynamic Resources Cards Grid -->
+          <div class="resources-grid" id="resourcesContainer">
+            <!-- Rendered dynamically via JavaScript -->
+          </div>
+
+          <!-- Empty State for Resources -->
+          <div class="empty-state" id="resourcesEmptyState" style="display: none;">
+            <div class="empty-icon">📁</div>
+            <h3 class="empty-title">No Resources Found</h3>
+            <p class="empty-desc">No study files match your active filter or search criteria. Upload your lecture notes, PDFs, diagrams, syllabus, or question papers to keep them organized.</p>
+            <button type="button" class="btn-primary" id="emptyStateUploadBtn">➕ Upload First File</button>
           </div>
         </div>
       </section>
@@ -548,6 +666,133 @@
           <span>💾</span>
           <span>Save Note</span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Add / Edit Resource Modal -->
+  <div class="modal-overlay" id="resourceModal" role="dialog" aria-modal="true" aria-labelledby="resourceModalTitle">
+    <div class="modal-box" style="max-width: 640px;">
+      <div class="modal-header">
+        <h3 class="modal-title" id="resourceModalTitle">
+          <span>📁</span> Upload Study Resource
+        </h3>
+        <button type="button" class="btn-modal-close" id="closeResourceModalBtn" aria-label="Close modal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="resourceForm">
+          <input type="hidden" id="resourceIdInput">
+
+          <!-- File Picker Zone inside Modal -->
+          <div class="form-group" id="modalFileSelectGroup">
+            <label class="form-label">
+              Select File <strong style="color: var(--primary);">* (Image, PDF, Word, Excel, Audio, Zip, or Any File)</strong>
+            </label>
+            <div class="modal-file-dropzone" id="modalFileDropzone">
+              <input type="file" id="modalFileInput" style="display: none;" accept="*/*">
+              <div class="modal-file-prompt" id="modalFilePrompt">
+                <span style="font-size: 2.2rem;">📤</span>
+                <div>
+                  <strong>Click to choose a file</strong> or drag &amp; drop here
+                  <div style="font-size: 0.8rem; color: var(--text-dim); margin-top: 4px;">PDFs, Images, Word documents, Presentations, Spreadsheets, or any file</div>
+                </div>
+              </div>
+              <div class="modal-file-selected" id="modalFileSelected" style="display: none;">
+                <div class="selected-file-badge" id="modalSelectedBadge">📄 PDF</div>
+                <div class="selected-file-details">
+                  <div class="selected-file-name" id="modalSelectedFileName">document.pdf</div>
+                  <div class="selected-file-meta" id="modalSelectedFileMeta">0 KB • application/pdf</div>
+                </div>
+                <button type="button" class="btn-secondary" id="modalChangeFileBtn" style="padding: 0.35rem 0.75rem; font-size: 0.78rem;">Change</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Resource Title -->
+          <div class="form-group">
+            <label class="form-label" for="resourceTitleInput">
+              Resource Title <strong style="color: var(--primary);">*</strong>
+            </label>
+            <input type="text" id="resourceTitleInput" class="form-input"
+              placeholder="e.g. Higher Education Commission Notes &amp; Formulas" required>
+          </div>
+
+          <!-- Paper & Category Classification -->
+          <div class="form-row-2">
+            <div class="form-group">
+              <label class="form-label" for="resourcePaperInput">Target Paper</label>
+              <select id="resourcePaperInput" class="form-select">
+                <option value="ALL">All Papers / General</option>
+                <option value="P1">Paper 1 (General Paper)</option>
+                <option value="P2">Paper 2 (Computer Science)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="resourceCategoryInput">Resource Category</label>
+              <select id="resourceCategoryInput" class="form-select">
+                <option value="PDF Document">📄 PDF Document</option>
+                <option value="Diagram / Chart">🖼️ Diagram / Infographic / Chart</option>
+                <option value="Previous Year Paper (PYQ)">🎯 Previous Year Paper (PYQ)</option>
+                <option value="Formula Sheet">📊 Formula Sheet / Master Table</option>
+                <option value="Syllabus &amp; Guide">📚 Syllabus &amp; Guide</option>
+                <option value="Handout / Book Chapter">📖 Handout / Book Chapter</option>
+                <option value="Code / Script">💻 Code / Script / Dataset</option>
+                <option value="Audio Lecture">🎵 Audio Lecture</option>
+                <option value="Other Resource">📦 Other Resource</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Unit / Subject -->
+          <div class="form-group">
+            <label class="form-label" for="resourceUnitInput">Subject / Unit Category</label>
+            <input type="text" id="resourceUnitInput" class="form-input"
+              placeholder="e.g. Unit 9: Computer Networks, Unit 2: Research Aptitude">
+          </div>
+
+          <!-- Short Description -->
+          <div class="form-group">
+            <label class="form-label" for="resourceDescInput">Description / Revision Notes</label>
+            <textarea id="resourceDescInput" class="form-textarea" style="min-height: 85px;"
+              placeholder="Add short summary, key pages, or what exam questions this file helps solve..."></textarea>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary" id="cancelResourceModalBtn">Cancel</button>
+        <button type="button" class="btn-primary" id="saveResourceBtn">
+          <span>💾</span> Save Resource
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Resource Preview Modal (Full viewer for PDF, Images, Text, Audio, Video, etc.) -->
+  <div class="modal-overlay" id="resourcePreviewModal" role="dialog" aria-modal="true" aria-labelledby="previewModalTitle">
+    <div class="modal-box resource-preview-box">
+      <div class="modal-header">
+        <div class="preview-header-info">
+          <span class="preview-type-badge" id="previewTypeBadge">📄 PDF</span>
+          <div class="preview-title-col">
+            <h3 class="modal-title" id="previewModalTitle">Resource Preview</h3>
+            <span class="preview-meta-sub" id="previewMetaSub">filename.pdf • 1.2 MB</span>
+          </div>
+        </div>
+        <div class="preview-header-actions">
+          <button type="button" class="btn-secondary btn-icon-text" id="previewOpenNewTabBtn" title="Open in dedicated browser tab">
+            <span>↗️</span> <span class="hide-mobile">New Tab</span>
+          </button>
+          <button type="button" class="btn-primary btn-icon-text" id="previewDownloadBtn" title="Download file">
+            <span>⬇️</span> <span class="hide-mobile">Download</span>
+          </button>
+          <button type="button" class="btn-modal-close" id="closeResourcePreviewBtn" aria-label="Close preview">✕</button>
+        </div>
+      </div>
+
+      <div class="modal-body resource-preview-body" id="resourcePreviewBody">
+        <!-- Rendered dynamically based on mime type -->
       </div>
     </div>
   </div>

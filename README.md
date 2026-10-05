@@ -29,22 +29,30 @@
    - Real-time auto-saving with word and character counters.
    - 1-click TXT export.
 
-4. **🗑️ Safe Recycle Bin (Section 4)**:
+4. **📁 Study Resources & Files Vault (Section 4)**:
+   - Complete support for uploading, storing, and organizing **PDF documents**, **Images** (PNG, JPG, SVG, WebP), **Docs/Word/PPT/Excel**, **ZIP archives**, audio, and **any file type**.
+   - **Interactive Drag & Drop Vault**: drop any file directly onto the dashboard.
+   - **Type Filter Pills**: filter instantly by `All`, `📄 PDFs`, `🖼️ Images`, `📑 Documents`, or `📦 Other`.
+   - **In-App Resource Previewer**: 1-click preview of PDFs, images, text/code, and audio without leaving the page.
+   - **1-Click Download**: instant high-speed file download.
+   - **Persistent IndexedDB Storage**: supports large multi-megabyte files without localStorage quota limits.
+
+5. **🗑️ Safe Recycle Bin (Section 5)**:
    - Deleted topics are moved safely to the Recycle Bin.
    - **1-Click Restore**: Restores the item directly back to active topics and places it at the **top of the Index**.
    - Permanent deletion and empty bin options.
 
-5. **🔍 Global Live Search with Keyword Highlighting**:
-   - Searches across Topic Titles, Desi Tricks, Explanations, and Units.
+6. **🔍 Global Live Search with Keyword Highlighting**:
+   - Searches across Topic Titles, Desi Tricks, Explanations, Units, and Study Resources.
    - Dynamically highlights matching keywords in radiant amber (`<mark class="search-highlight">`).
 
-6. **🎨 Dual Themes**:
+7. **🎨 Dual Themes**:
    - Modern Dark Mode (default, easy on the eyes for night study) and Light Mode.
    - Preserves theme choice in `localStorage`.
 
-7. **💾 Data Portability**:
-   - Offline-first: saved in browser `localStorage`.
-   - Export and Import complete data backups in portable `.json` format.
+8. **💾 Data Portability & Cloud Sync**:
+   - Offline-first: saved in browser `localStorage` and `IndexedDB`.
+   - Export and Import complete data backups (topics, notes, resources, recycle bin) in portable `.json` format.
 
 ---
 

@@ -249,3 +249,72 @@ const SEED_NOTEPAD = `📝 UGC NET Revision Strategy & Important Formulas:
 - Morning 6-8 AM: Paper 1 Concepts & Desi Tricks review.
 - Evening 7-10 PM: Paper 2 Core Units (TOC, OS, DBMS, Networks).
 - Solve at least 25 PYQs with timer.`;
+
+const SEED_RESOURCES = [
+  {
+    id: "res-seed-1",
+    title: "UGC NET Paper 1 Official Syllabus & Marking Guide",
+    fileName: "UGC_NET_Paper1_Syllabus_Guide.pdf",
+    paper: "P1",
+    category: "PDF Document",
+    unit: "General Paper 1",
+    description: "Comprehensive breakdown of all 10 units: Teaching Aptitude, Research Aptitude, Reading Comprehension, Communication, Mathematical Reasoning, Logical Reasoning, DI, ICT, People & Environment, Higher Education.",
+    mimeType: "application/pdf",
+    extension: "pdf",
+    typeGroup: "pdf",
+    size: 188416,
+    sizeFormatted: "184 KB",
+    createdAt: Date.now() - 3600000 * 48,
+    updatedAt: Date.now() - 3600000 * 48
+  },
+  {
+    id: "res-seed-2",
+    title: "OSI 7 Layers & Networking Protocols Architecture Chart",
+    fileName: "OSI_7_Layers_Protocols_Chart.svg",
+    paper: "P2",
+    category: "Diagram / Chart",
+    unit: "Unit 9: Computer Networks",
+    description: "Visual mnemonic diagram mapping Application, Presentation, Session, Transport, Network, Data Link, and Physical layers with protocols (HTTP, TCP, IP, Ethernet) and hardware devices.",
+    mimeType: "image/svg+xml",
+    extension: "svg",
+    typeGroup: "image",
+    size: 94208,
+    sizeFormatted: "92 KB",
+    thumbnail: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" width="100%" height="100%"><rect width="400" height="240" fill="%230f172a" rx="12"/><text x="200" y="32" fill="%23f8fafc" font-size="15" font-weight="bold" font-family="sans-serif" text-anchor="middle">OSI 7 LAYERS REFERENCE MODEL</text><g transform="translate(30, 48)"><rect width="340" height="22" fill="%236366f1" rx="4"/><text x="170" y="16" fill="white" font-size="11" font-weight="bold" text-anchor="middle">7. Application (HTTP, DNS, FTP)</text></g><g transform="translate(30, 74)"><rect width="340" height="22" fill="%238b5cf6" rx="4"/><text x="170" y="16" fill="white" font-size="11" font-weight="bold" text-anchor="middle">6. Presentation (SSL/TLS, JPEG)</text></g><g transform="translate(30, 100)"><rect width="340" height="22" fill="%233b82f6" rx="4"/><text x="170" y="16" fill="white" font-size="11" font-weight="bold" text-anchor="middle">5. Session (RPC, NetBIOS)</text></g><g transform="translate(30, 126)"><rect width="340" height="22" fill="%230ea5e9" rx="4"/><text x="170" y="16" fill="white" font-size="11" font-weight="bold" text-anchor="middle">4. Transport (TCP, UDP - Segments)</text></g><g transform="translate(30, 152)"><rect width="340" height="22" fill="%2314b8a6" rx="4"/><text x="170" y="16" fill="white" font-size="11" font-weight="bold" text-anchor="middle">3. Network (IP, Routers - Packets)</text></g><g transform="translate(30, 178)"><rect width="340" height="22" fill="%2310b981" rx="4"/><text x="170" y="16" fill="white" font-size="11" font-weight="bold" text-anchor="middle">2. Data Link (Ethernet, Switch - Frames)</text></g><g transform="translate(30, 204)"><rect width="340" height="22" fill="%23f59e0b" rx="4"/><text x="170" y="16" fill="white" font-size="11" font-weight="bold" text-anchor="middle">1. Physical (Cables, Hubs - Bits)</text></g></svg>',
+    createdAt: Date.now() - 3600000 * 24,
+    updatedAt: Date.now() - 3600000 * 24
+  },
+  {
+    id: "res-seed-3",
+    title: "TOC Decidability & Language Classes Quick Reference",
+    fileName: "TOC_Decidability_Closure_Guide.pdf",
+    paper: "P2",
+    category: "Formula Sheet",
+    unit: "Unit 8: Theory of Computation",
+    description: "Master table of decidability problems: Emptiness, Finiteness, Equivalence, Membership across Regular, Context-Free, Context-Sensitive, Recursive, and Recursively Enumerable languages.",
+    mimeType: "application/pdf",
+    extension: "pdf",
+    typeGroup: "pdf",
+    size: 245760,
+    sizeFormatted: "240 KB",
+    createdAt: Date.now() - 3600000 * 12,
+    updatedAt: Date.now() - 3600000 * 12
+  },
+  {
+    id: "res-seed-4",
+    title: "Square of Opposition & Logical Fallacies Summary",
+    fileName: "Square_of_Opposition_Cheat_Sheet.txt",
+    paper: "P1",
+    category: "Notes / Summary",
+    unit: "Unit 6: Logical Reasoning",
+    description: "Quick rulebook for AEIO propositions: Contradictories (A-O, E-I), Contraries (A-E), Subcontraries (I-O), and Subalternation truth propagation.",
+    mimeType: "text/plain",
+    extension: "txt",
+    typeGroup: "doc",
+    size: 14336,
+    sizeFormatted: "14 KB",
+    createdAt: Date.now() - 3600000 * 6,
+    updatedAt: Date.now() - 3600000 * 6
+  }
+];
+
