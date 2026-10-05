@@ -29,13 +29,15 @@
    - Real-time auto-saving with word and character counters.
    - 1-click TXT export.
 
-4. **📁 Study Resources & Files Vault (Section 4)**:
-   - Complete support for uploading, storing, and organizing **PDF documents**, **Images** (PNG, JPG, SVG, WebP), **Docs/Word/PPT/Excel**, **ZIP archives**, audio, and **any file type**.
-   - **Interactive Drag & Drop Vault**: drop any file directly onto the dashboard.
-   - **Type Filter Pills**: filter instantly by `All`, `📄 PDFs`, `🖼️ Images`, `📑 Documents`, or `📦 Other`.
-   - **In-App Resource Previewer**: 1-click preview of PDFs, images, text/code, and audio without leaving the page.
-   - **1-Click Download**: instant high-speed file download.
-   - **Persistent IndexedDB Storage**: supports large multi-megabyte files without localStorage quota limits.
+4. **📁 Google Drive Style Files & Study Resources Vault (Section 4)**:
+   - Authentic Google Drive layout with left navigation sidebar, iconic `+ New` button with the 4-color Google plus icon, pill search bar, and offline status indicator.
+   - **Horizontal Folders Section**: Rounded folder cards (`📁 [Folder Name]`) with 1-click folder navigation.
+   - **Interactive File Vault**: Google Drive Grid Cards and List Table with colored icons (Red PDF, Purple Image, Blue Doc, Green Sheet, Cyan Link).
+   - **In-App Resource Previewer**: Instant preview of PDFs, images, docs/notes, and links directly in-app without downloading, with floating `‹` / `›` prev/next navigation buttons and keyboard arrow shortcuts.
+   - **Slide-Out Details Drawer (`ⓘ`)**: Displays file preview thumbnail, properties table (Type, Size, Location, Owner, Modified), revision notes, and actions.
+   - **Right-Click Google Drive Context Menu**: Preview, Download, Edit, Star, File Info, and Move to Trash.
+   - **Zero-Error Valid Binary Downloads**: Syntactically valid Adobe PDF 1.4 binary stream files that open smoothly in Acrobat, Chrome, Edge, and mobile viewers.
+   - **Persistent IndexedDB Storage**: Supports large multi-megabyte files without localStorage quota limits.
 
 5. **🗑️ Safe Recycle Bin (Section 5)**:
    - Deleted topics are moved safely to the Recycle Bin.
@@ -66,7 +68,7 @@ Whenever changes are made to this repository:
    ```
 2. Push to GitHub:
    ```bash
-   git push origin master
+   git push origin main
    ```
 3. **Netlify automatically detects the push and deploys the updated live site in seconds!**
 
