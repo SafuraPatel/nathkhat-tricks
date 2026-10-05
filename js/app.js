@@ -459,6 +459,55 @@ function loadStoredData() {
   try {
     localStorage.removeItem(STORAGE_KEYS.CUSTOM_FOLDERS);
   } catch (e) {}
+
+  // Automatically recover any uploaded files from IndexedDB if ever missing
+  recoverStoredResourcesFromIdb();
+}
+
+async function recoverStoredResourcesFromIdb() {
+  try {
+    const entries = await IdbResourceStore.getAllEntries();
+    if (!Array.isArray(entries) || entries.length === 0) return;
+    let modified = false;
+    const knownIds = new Set(STATE.resources.map(r => r.id));
+
+    entries.forEach(entry => {
+      if (!entry || !entry.id || entry.id.startsWith('res-seed-')) return;
+      if (!knownIds.has(entry.id)) {
+        const ext = (entry.name || '').split('.').pop().toLowerCase();
+        const group = getFileTypeGroup(entry.name, entry.mimeType);
+        const dataLength = (typeof entry.data === 'string') ? entry.data.length : 0;
+        const estBytes = dataLength > 0 ? Math.round(dataLength * 0.75) : 1024;
+        const recovered = {
+          id: entry.id,
+          title: (entry.name || 'Uploaded File').replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' '),
+          fileName: entry.name || 'file',
+          size: estBytes,
+          sizeFormatted: formatFileSize(estBytes),
+          mimeType: entry.mimeType || 'application/octet-stream',
+          extension: ext,
+          typeGroup: group,
+          paper: 'ALL',
+          category: '',
+          unit: '',
+          description: '',
+          thumbnail: (group === 'image' && entry.data) ? entry.data : null,
+          createdAt: entry.updatedAt || Date.now(),
+          updatedAt: entry.updatedAt || Date.now()
+        };
+        STATE.resources.unshift(recovered);
+        knownIds.add(entry.id);
+        modified = true;
+      }
+    });
+
+    if (modified) {
+      saveResources();
+      renderResources();
+      updateBadges();
+      syncGlobally();
+    }
+  } catch (err) {}
 }
 
 function saveTopics() {
@@ -1670,6 +1719,22 @@ const IdbResourceStore = {
         tx.onerror = () => resolve(false);
       } catch (e) {
         resolve(false);
+      }
+    });
+  },
+
+  async getAllEntries() {
+    const db = await this.getDB();
+    if (!db) return [];
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction('files', 'readonly');
+        const store = tx.objectStore('files');
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => resolve([]);
+      } catch (e) {
+        resolve([]);
       }
     });
   }
@@ -4253,8 +4318,21 @@ function onRemoteDataReceived(remote, source) {
       localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(STATE.notes));
     }
     if (Array.isArray(remote.resources)) {
-      STATE.resources = remote.resources;
-      localStorage.setItem(STORAGE_KEYS.RESOURCES, JSON.stringify(STATE.resources));
+      if (remote.resources.length === 0 && STATE.resources.length > 0) {
+        // Protect local user files: never allow an empty remote snapshot to delete user's uploaded files
+        syncGlobally();
+      } else {
+        // Merge remote with local so locally uploaded files are never lost
+        const remoteIds = new Set(remote.resources.map(r => r.id));
+        const merged = [...remote.resources];
+        STATE.resources.forEach(localR => {
+          if (!remoteIds.has(localR.id)) {
+            merged.push(localR);
+          }
+        });
+        STATE.resources = merged;
+        localStorage.setItem(STORAGE_KEYS.RESOURCES, JSON.stringify(STATE.resources));
+      }
     }
     if (Array.isArray(remote.bin)) {
       STATE.bin = remote.bin;

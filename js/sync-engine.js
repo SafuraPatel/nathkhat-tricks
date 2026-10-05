@@ -87,7 +87,7 @@ const SyncEngine = (function() {
 
       if (res.ok) {
         const data = await res.json();
-        if (data && (Array.isArray(data.topics) || Array.isArray(data.notes))) {
+        if (data && (Array.isArray(data.topics) || Array.isArray(data.notes) || Array.isArray(data.resources))) {
           if (data.updatedAt) lastKnownUpdatedAt = Math.max(lastKnownUpdatedAt, data.updatedAt);
           return data;
         }
@@ -110,7 +110,7 @@ const SyncEngine = (function() {
 
         if (res.ok) {
           const data = await res.json();
-          if (data && (Array.isArray(data.topics) || Array.isArray(data.notes))) {
+          if (data && (Array.isArray(data.topics) || Array.isArray(data.notes) || Array.isArray(data.resources))) {
             if (data.updatedAt) lastKnownUpdatedAt = Math.max(lastKnownUpdatedAt, data.updatedAt);
             return data;
           }
@@ -155,6 +155,7 @@ const SyncEngine = (function() {
     const payload = {
       topics: Array.isArray(data.topics) ? data.topics : [],
       notes: Array.isArray(data.notes) ? data.notes : [],
+      resources: Array.isArray(data.resources) ? data.resources : [],
       bin: Array.isArray(data.bin) ? data.bin : [],
       updatedAt: now
     };
