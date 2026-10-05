@@ -48,8 +48,36 @@ const STORAGE_KEYS = {
   ACTIVE_VIEW: 'nathkhat_active_view_v1',
   ACTIVE_PAPER: 'nathkhat_active_paper_v1',
   LAST_SYNC: 'nathkhat_last_sync_v1',
-  TOPICS_MODIFIED: 'nathkhat_topics_modified_v1'
+  TOPICS_MODIFIED: 'nathkhat_topics_modified_v1',
+  DELETED_RESOURCES: 'nathkhat_deleted_resources_v1'
 };
+
+function getDeletedResourceIds() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.DELETED_RESOURCES);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch (e) {
+    return new Set();
+  }
+}
+
+function markResourceDeleted(id) {
+  try {
+    const set = getDeletedResourceIds();
+    set.add(id);
+    localStorage.setItem(STORAGE_KEYS.DELETED_RESOURCES, JSON.stringify(Array.from(set)));
+  } catch (e) {}
+}
+
+function unmarkResourceDeleted(id) {
+  try {
+    const set = getDeletedResourceIds();
+    if (set.has(id)) {
+      set.delete(id);
+      localStorage.setItem(STORAGE_KEYS.DELETED_RESOURCES, JSON.stringify(Array.from(set)));
+    }
+  } catch (e) {}
+}
 
 // DOM Elements
 const DOM = {
@@ -305,6 +333,11 @@ function initApp() {
     applyTheme(STATE.theme);
     updateBadges();
 
+    // Request persistent storage from browser so files and data are never cleared under storage pressure
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().catch(() => {});
+    }
+
     // Prevent browser from jumping to top or erratic position on reload
     if (window.history && 'scrollRestoration' in window.history) {
       window.history.scrollRestoration = 'manual';
@@ -438,11 +471,12 @@ function loadStoredData() {
 
   // Load Resources (PDFs, Images, Documents, Any Files) - No default seed files kept
   const savedResources = localStorage.getItem(STORAGE_KEYS.RESOURCES);
+  const deletedIds = getDeletedResourceIds();
   if (savedResources) {
     try {
       const parsed = JSON.parse(savedResources);
       STATE.resources = Array.isArray(parsed)
-        ? parsed.filter(r => r && r.id && !r.id.startsWith('res-seed-'))
+        ? parsed.filter(r => r && r.id && !r.id.startsWith('res-seed-') && !deletedIds.has(r.id))
         : [];
       saveResources();
     } catch (e) {
@@ -470,9 +504,10 @@ async function recoverStoredResourcesFromIdb() {
     if (!Array.isArray(entries) || entries.length === 0) return;
     let modified = false;
     const knownIds = new Set(STATE.resources.map(r => r.id));
+    const deletedIds = getDeletedResourceIds();
 
     entries.forEach(entry => {
-      if (!entry || !entry.id || entry.id.startsWith('res-seed-')) return;
+      if (!entry || !entry.id || entry.id.startsWith('res-seed-') || deletedIds.has(entry.id)) return;
       if (!knownIds.has(entry.id)) {
         const ext = (entry.name || '').split('.').pop().toLowerCase();
         const group = getFileTypeGroup(entry.name, entry.mimeType);
@@ -524,7 +559,20 @@ function saveNotes() {
 }
 
 function saveResources() {
-  localStorage.setItem(STORAGE_KEYS.RESOURCES, JSON.stringify(STATE.resources));
+  try {
+    localStorage.setItem(STORAGE_KEYS.RESOURCES, JSON.stringify(STATE.resources));
+  } catch (e) {
+    try {
+      // In case localStorage quota limit is reached, strip heavy thumbnails so file metadata is never lost
+      const lightResources = STATE.resources.map(r => {
+        const { thumbnail, ...rest } = r;
+        return rest;
+      });
+      localStorage.setItem(STORAGE_KEYS.RESOURCES, JSON.stringify(lightResources));
+    } catch (err2) {
+      console.warn('Could not save resources to localStorage:', err2);
+    }
+  }
   if (DOM.resourcesCountBadge) DOM.resourcesCountBadge.textContent = STATE.resources.length;
 }
 
@@ -2531,6 +2579,7 @@ async function saveResourceForm(e) {
   }
 
   const resId = 'res-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+  unmarkResourceDeleted(resId);
   const group = getFileTypeGroup(file.name, file.type);
   const ext = file.name.split('.').pop().toLowerCase();
 
@@ -2582,6 +2631,7 @@ async function handleBatchResourceFiles(fileList) {
 
   for (const file of files) {
     const resId = 'res-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+    unmarkResourceDeleted(resId);
     const group = getFileTypeGroup(file.name, file.type);
     const ext = file.name.split('.').pop().toLowerCase();
     const cleanTitle = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ');
@@ -2664,6 +2714,7 @@ async function saveCreateDoc(e) {
   const content = (DOM.docContentInput ? DOM.docContentInput.value : '').trim() || `${title}\n\nRevision notes created in NathKhat.`;
 
   const resId = 'res-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+  unmarkResourceDeleted(resId);
   const cleanTitle = title.replace(/[^a-zA-Z0-9_\-\s]/g, '').trim().replace(/\s+/g, '_');
 
   let fileBlob;
@@ -2816,6 +2867,7 @@ function saveCreateLink(e) {
   }
 
   const resId = 'res-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+  unmarkResourceDeleted(resId);
   const newResource = {
     id: resId,
     title,
@@ -2850,6 +2902,9 @@ async function deleteResource(resourceId) {
   if (!confirm(`Are you sure you want to delete "${res.title}"?`)) {
     return;
   }
+
+  // Explicit deletion: mark this resource ID as deleted so background sync won't resurrect it
+  markResourceDeleted(resourceId);
 
   STATE.resources = STATE.resources.filter(r => r.id !== resourceId);
   await IdbResourceStore.deleteFile(resourceId);
@@ -4318,20 +4373,24 @@ function onRemoteDataReceived(remote, source) {
       localStorage.setItem(STORAGE_KEYS.NOTES, JSON.stringify(STATE.notes));
     }
     if (Array.isArray(remote.resources)) {
-      if (remote.resources.length === 0 && STATE.resources.length > 0) {
+      const deletedIds = getDeletedResourceIds();
+      // Filter out any resource the user specifically deleted locally
+      const validRemote = remote.resources.filter(r => r && r.id && !deletedIds.has(r.id));
+
+      if (validRemote.length === 0 && STATE.resources.length > 0) {
         // Protect local user files: never allow an empty remote snapshot to delete user's uploaded files
         syncGlobally();
       } else {
         // Merge remote with local so locally uploaded files are never lost
-        const remoteIds = new Set(remote.resources.map(r => r.id));
-        const merged = [...remote.resources];
+        const remoteIds = new Set(validRemote.map(r => r.id));
+        const merged = [...validRemote];
         STATE.resources.forEach(localR => {
-          if (!remoteIds.has(localR.id)) {
+          if (!deletedIds.has(localR.id) && !remoteIds.has(localR.id)) {
             merged.push(localR);
           }
         });
         STATE.resources = merged;
-        localStorage.setItem(STORAGE_KEYS.RESOURCES, JSON.stringify(STATE.resources));
+        saveResources();
       }
     }
     if (Array.isArray(remote.bin)) {
@@ -4379,9 +4438,14 @@ function initCloudSync() {
       try {
         const updated = JSON.parse(e.newValue);
         if (Array.isArray(updated)) {
-          STATE.resources = updated;
-          updateBadges();
-          renderResources();
+          // Never allow an empty cross-tab update to wipe local user files
+          if (updated.length === 0 && STATE.resources.length > 0) {
+            saveResources();
+          } else {
+            STATE.resources = updated;
+            updateBadges();
+            renderResources();
+          }
         }
       } catch (err) {}
     } else if (e.key === STORAGE_KEYS.BIN && e.newValue) {
